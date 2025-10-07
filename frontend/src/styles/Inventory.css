@@ -1,79 +1,147 @@
-/* Modal overlay */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
+/* Page wrapper */
+.inventory-page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+/* Header within the card (title + actions) */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.section-header h3 { margin: 0; font-size: var(--fs-h2); }
+.section-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Loading / error */
+.loading { color: var(--muted); padding: 12px; }
+.error-msg { color: #ef5350; }
+
+/* Table wrapper + table (same look as Customers/Billing) */
+.table-wrap {
   width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
+  overflow: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+}
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.table thead th {
+  text-align: left;
+  padding: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+  position: sticky;
+  top: 0;
+  z-index: 1; /* keep under modal */
+}
+.table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.table tbody tr:last-child td { border-bottom: none; }
+.empty { text-align: center; color: var(--muted); padding: 18px; }
+
+/* Modal — darker, blurred backdrop and solid popup */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);      /* darker overlay so table doesn’t show through */
+  backdrop-filter: blur(3px);       /* soft blur behind */
+  display: grid;
+  place-items: center;
+  z-index: 9999;                    /* above sticky headers */
+  padding: 20px;
 }
 
-/* Modal box */
-.modal {
-  background: #fff;
-  padding: 20px 25px;
-  border-radius: 12px;
-  width: 420px;
-  max-width: 95%;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-  animation: fadeIn 0.3s ease-in-out;
+/* Popup container — ensure solid background */
+.modal-body {
+  width: 100%;
+  max-width: 640px;
+  background: var(--card, #111);    /* fallback solid surface (dark theme) */
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  padding: 0;
 }
 
-/* Form styles */
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* Header inside modal */
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px var(--space-5);
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.12));
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+}
+.modal-header h3 { margin: 0; }
+
+/* Solid inner surface so inputs never look transparent */
+.modal-content {
+  background: var(--surface, #1a1a1a);
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: var(--space-5);
 }
 
-.form label {
-  display: flex;
-  flex-direction: column;
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+.btn-close {
+  appearance: none;
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  border-radius: 10px;
+  background: var(--surface, #1a1a1a);
+  color: var(--text, #fff);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.btn-close:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+
+/* Form inside modal */
+.form-grid { display: grid; gap: var(--space-4); }
+.form-row { display: grid; gap: 6px; }
+.form-row.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+@media (max-width: 768px) { .form-row.two-col { grid-template-columns: 1fr; } }
+
+.form-row label { color: var(--muted); font-size: var(--fs-2); font-weight: 600; }
+.req { color: #ffb74d; }
+
+/* Inputs */
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  background: var(--card, #111);
+  color: var(--text, #fff);
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.form-input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
-.input {
-  margin-top: 4px;
-  padding: 8px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-/* Buttons */
-.form-buttons {
+/* Modal actions */
+.modal-actions {
+  margin-top: var(--space-3);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 15px;
 }
 
-.button {
-  background: #4CAF50;
-  color: white;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
+/* If your app uses a light theme, these optional overrides can help:
+:root {
+  --card: #fff;
+  --surface: #fff;
+  --text: #111;
+  --border: rgba(0,0,0,.08);
 }
-
-.button:hover {
-  background: #45a049;
-}
-
-.button.cancel {
-  background: #ccc;
-  color: #333;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+*/
+.row-actions .btn-ghost { border: 1px solid var(--border, #e5e7eb); padding: 6px 10px; border-radius: 8px; background: transparent; }
+.row-actions .btn-danger-ghost { border: 1px solid #fca5a5; color: #b91c1c; padding: 6px 10px; border-radius: 8px; background: transparent; }
+.btn--danger { background: #dc2626; color: #fff; }

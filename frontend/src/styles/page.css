@@ -1,0 +1,16 @@
+/* Simple utilities to make pages cohesive */
+.page-header {
+  display: flex; align-items: center; gap: 10px; justify-content: space-between;
+}
+.page-header h2 { font-size: var(--fs-h2); margin: 0; }
+.page-actions { display: flex; gap: 8px; }
+
+.section { display: grid; gap: var(--space-4); }
+.grid-2 { display: grid; gap: var(--space-5); grid-template-columns: 1fr 1fr; }
+.grid-3 { display: grid; gap: var(--space-5); grid-template-columns: 1fr 1fr 1fr; }
+
+@media (max-width: 1024px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .app-shell { grid-template-columns: 1fr; }
+  .app-shell__sidebar { position: static; height: auto; }
+}

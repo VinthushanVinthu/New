@@ -1,0 +1,143 @@
+:root {
+  --reset-bg: radial-gradient(1200px 800px at 80% -10%, #1a2032 0%, #0b0c10 60%);
+  --reset-card: #141c2f;
+  --reset-surface: #0f1629;
+  --reset-border: rgba(120,120,120,.25);
+  --reset-text: #e7eaf3;
+  --reset-muted: #9aa3b2;
+  --reset-primary: #2563eb;
+  --reset-primary-ink: #ffffff;
+  --reset-radius: 14px;
+}
+
+/* Full page */
+.reset-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--reset-bg);
+  padding: 20px;
+}
+
+/* Card */
+.reset-card {
+  background: var(--reset-card);
+  border: 1px solid var(--reset-border);
+  border-radius: var(--reset-radius);
+  padding: 32px 28px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.reset-title {
+  margin: 0 0 20px;
+  color: var(--reset-text);
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Form */
+.reset-form {
+  display: grid;
+  gap: 16px;
+}
+
+.reset-field {
+  display: grid;
+  gap: 6px;
+}
+
+.reset-label {
+  color: var(--reset-muted);
+  font-size: 13px;
+}
+
+.reset-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--reset-border);
+  background: var(--reset-surface);
+  color: var(--reset-text);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reset-input:focus {
+  border-color: var(--reset-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+}
+
+/* Button */
+.reset-btn {
+  background: var(--reset-primary);
+  color: var(--reset-primary-ink);
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.reset-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+}
+
+.reset-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Links */
+.reset-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.reset-link {
+  color: var(--reset-primary);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.reset-link:hover {
+  text-decoration: underline;
+}
+
+/* Messages */
+.reset-success {
+  color: #4caf50;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.reset-error {
+  color: #ef5350;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.small-text {
+  font-size: 12px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .reset-card {
+    padding: 24px 20px;
+  }
+
+  .reset-title {
+    font-size: 20px;
+  }
+}

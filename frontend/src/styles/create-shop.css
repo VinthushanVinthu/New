@@ -1,0 +1,67 @@
+/* Card width + layout */
+.create-shop-card {
+  max-width: 720px;
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Form grid (reuse existing grid-2 if present in page.css) */
+.grid-2 {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 1024px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+/* Fields */
+.form-field { display: grid; gap: 6px; }
+.form-field label {
+  color: var(--muted);
+  font-size: var(--fs-2);
+  font-weight: 600;
+}
+
+/* Inputs */
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.form-input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Result card */
+.result-card {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.result-rows { display: grid; gap: 10px; }
+
+.row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+}
+.label { color: var(--muted); font-size: var(--fs-2); }
+.value { font-weight: 600; }
+.mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
+
+.error-msg { color: #ef5350; }

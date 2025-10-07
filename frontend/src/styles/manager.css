@@ -1,0 +1,73 @@
+/* Base layout bits assumed present globally:
+   body background, card base, etc. Keeping only page-specific here. */
+
+/* KPI */
+.kpi {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.kpi__card h3 {
+  margin: 0 0 6px 0;
+  color: var(--muted, #cbd5e1);
+  font-size: 14px;
+  font-weight: 600;
+}
+.kpi__card h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: .2px;
+}
+
+/* Section header */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.section-header h3 { margin: 0; font-size: 18px; }
+
+/* Quick actions row */
+.qa-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Helpers */
+.error-msg { color: #ef5350; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
+.muted { opacity: 0.75; }
+.danger { color: #ffb3b3; }
+
+/* Table */
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+}
+
+/* Two-column grid */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+/* Badges for status */
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #1c2541;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.badge--paid     { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.35); }
+.badge--partial  { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); }
+.badge--unpaid   { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); }
+
+/* Payment bars */

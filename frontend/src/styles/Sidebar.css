@@ -1,51 +1,33 @@
-/* Sidebar.css */
 .sidebar {
-  position: fixed;          /* 👈 keeps it attached */
-  top: 0;
-  left: 0;
-  height: 100vh;            /* full vertical height */
-  width: 220px;
-  background: #3a506b;
-  padding: 20px;
-  border-right: 1px solid #110202;
-  display: flex;
-  flex-direction: column;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  box-shadow: var(--shadow);
 }
 
-.sidebar h3 {
-  margin-top: 0;
-  color: #fff;
-  font-size: 1.2rem;
-  margin-bottom: 20px;
+.sidebar__title {
+  font-weight: 700;
+  margin-bottom: var(--space-3);
 }
 
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex-grow: 1;
-}
-
-.sidebar li {
-  margin-bottom: 10px;
-}
+.sidebar__nav { display: grid; gap: 6px; margin-bottom: var(--space-5); }
 
 .sidebar-link {
-  display: block;
-  text-decoration: none;
-  color: #cbd5e0;
-  padding: 10px 12px;
-  border-radius: 6px;
-  transition: background 0.3s, color 0.3s;
+  display: block; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid transparent; color: var(--text);
+  transition: background .2s ease, border-color .2s ease, transform .06s ease;
 }
-
-.sidebar-link:hover {
-  background: #5bc0be;
-  color: #fff;
-}
-
+.sidebar-link:hover { background: var(--surface); border-color: var(--border); transform: translateY(-1px); }
 .sidebar-link.active {
-  background: #1c2541;   /* Active background */
-  color: #ffffff;        /* Active text color */
-  font-weight: 600;
+  background: linear-gradient(180deg, rgba(79,70,229,.2), rgba(79,70,229,.08));
+  border-color: var(--ring);
 }
+
+.sidebar-shop.card { padding: var(--space-4); }
+.sidebar-shop__header { font-weight: 600; margin-bottom: var(--space-3); }
+.sidebar-shop__row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.sidebar-shop__row .label { color: var(--muted); font-size: var(--fs-2); }
+.sidebar-shop__row .value { font-weight: 600; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
+.sidebar-shop__empty { color: var(--muted); font-size: var(--fs-2); }

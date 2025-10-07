@@ -6,19 +6,20 @@ const AuthCtx = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [initializing, setInitializing] = useState(true); // NEW
 
-  // load persisted auth on first mount
   useEffect(() => {
-    const raw = localStorage.getItem("auth");
-    if (raw) {
-      try {
+    try {
+      const raw = localStorage.getItem("auth");
+      if (raw) {
         const parsed = JSON.parse(raw);
         setUser(parsed.user || null);
         setToken(parsed.token || null);
-      } catch {
-        // bad JSON -> clear
-        localStorage.removeItem("auth");
       }
+    } catch {
+      localStorage.removeItem("auth");
+    } finally {
+      setInitializing(false); // NEW: we're done deciding
     }
   }, []);
 
@@ -35,7 +36,10 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const value = useMemo(() => ({ user, token, login, logout, setUser }), [user, token]);
+  const value = useMemo(
+    () => ({ user, token, login, logout, setUser, initializing }), // expose initializing
+    [user, token, initializing]
+  );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

@@ -1,0 +1,87 @@
+/* Reuse variables + base from your global styles */
+
+.page-title {
+  margin: 0 0 12px 0;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+.kpi {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5, 12px);
+  margin-bottom: 16px;
+}
+
+.kpi__card h3 {
+  margin: 0 0 6px 0;
+  color: var(--muted, rgba(255,255,255,0.75));
+  font-size: var(--fs-2, 14px);
+  font-weight: 600;
+}
+.kpi__card h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: .2px;
+}
+.kpi__card .mini {
+  margin-top: 6px;
+  opacity: .85;
+  font-size: 13px;
+}
+
+/* Two columns */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5, 12px);
+  margin-bottom: 16px;
+}
+
+/* Section header */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-4, 10px);
+}
+.section-header h3 { margin: 0; font-size: var(--fs-h2, 18px); }
+
+/* Card + table (aligned with your dark theme) */
+.card {
+  background: #3a506b;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  margin-bottom: 16px;
+}
+
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+}
+.table thead th { font-weight: 700; opacity: 0.9; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #1c2541;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.badge--paid     { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.35); }
+.badge--partial  { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); }
+.badge--unpaid   { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); }
+
+.muted { opacity: .7; }
+.error-card { border: 1px solid rgba(239,68,68,0.6); background: rgba(239,68,68,0.1); }
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .kpi { grid-template-columns: 1fr; }
+  .two-col { grid-template-columns: 1fr; }
+}

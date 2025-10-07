@@ -1,0 +1,253 @@
+/* Page wrapper */
+.bills-page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+/* Header actions */
+.bills-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.bills-header h2 { margin: 0; font-size: var(--fs-h2); }
+
+.bills-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Inputs */
+.bills-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.bills-input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.bills-input--search { min-width: 260px; }
+
+/* Buttons */
+.bills-btn {
+  appearance: none;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 14px;
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+}
+.bills-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+}
+.bills-btn--outline { background: transparent; }
+.bills-btn--sm { padding: 6px 10px; border-radius: 8px; font-size: var(--fs-2); }
+.bills-btn--danger { border-color: #b71c1c; color: #ff8a80; }
+.bills-btn--danger:hover { box-shadow: 0 6px 18px rgba(183,28,28,.35); }
+
+/* Table wrapper */
+.bills-table-wrap {
+  width: 100%;
+  overflow: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+}
+
+/* Table */
+.bills-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.bills-table thead th {
+  text-align: left;
+  padding: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,.02);
+  position: sticky;
+  top: 0;
+  z-index: 1; /* keep under modal */
+}
+.bills-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.bills-table tbody tr:last-child td { border-bottom: none; }
+
+.bills-empty { text-align: center; color: var(--muted); padding: 18px; }
+
+/* Row actions */
+.bills-row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Loading / Errors */
+.bills-loading { color: var(--muted); padding: 12px; text-align: center; }
+.bills-error { color: #ef5350; padding: 12px; }
+.bills-muted { color: var(--muted); font-size: var(--fs-2); }
+
+/* Status pills */
+.bills-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.bills-pill--paid { border-color: #2e7d32; color: #c8e6c9; }
+.bills-pill--partial { border-color: #f9a825; color: #ffe082; }
+.bills-pill--unpaid { border-color: #b71c1c; color: #ff8a80; }
+
+/* Expand row */
+.bills-row-expand td { background: rgba(255,255,255,.02); }
+.bills-expand-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+
+/* Mini tables inside expand */
+.bills-mini-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.bills-mini-table th, .bills-mini-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.bills-mini-table thead th {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(255,255,255,.03);
+}
+
+/* Totals */
+.bills-totals {
+  margin-top: var(--space-4);
+  display: grid;
+  gap: 8px;
+}
+.bills-totals > div {
+  display: flex; justify-content: space-between;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px;
+}
+
+/* ===== Modal (darker, blurred backdrop + solid popup) ===== */
+.bills-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);      /* darker overlay so table doesn’t show through */
+  backdrop-filter: blur(3px);       /* soft blur behind */
+  display: grid;
+  place-items: center;
+  z-index: 9999;                    /* above sticky headers */
+  padding: 20px;
+}
+.bills-modal-body {
+  width: 100%;
+  max-width: 560px;
+  background: var(--card, #111);    /* solid surface (fallback for dark) */
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  padding: 0;
+  overflow: hidden;                 /* keep header/content crisp */
+}
+.bills-modal-body--fullscreen {
+  max-width: none;
+  width: min(1100px, 96vw);
+  height: 90vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+.bills-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px var(--space-5);
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.12));
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+}
+.bills-modal-header h3 { margin: 0; }
+.bills-modal-header__actions { display: flex; align-items: center; gap: 8px; }
+
+.bills-btn-close {
+  appearance: none;
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  border-radius: 10px;
+  background: var(--surface, #1a1a1a);
+  color: var(--text, #fff);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.bills-btn-close:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+
+.bills-modal-content {
+  padding: var(--space-5);
+  background: var(--surface, #1a1a1a); /* solid inner background */
+  overflow: auto;                      /* scroll inner when fullscreen */
+}
+
+/* Editor inner UI */
+.bills-editor .bills-toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+.bills-meta { margin-bottom: 12px; display: grid; gap: 6px; }
+.bills-meta__row { display: flex; gap: 18px; flex-wrap: wrap; }
+.bills-label { font-size: 12px; color: var(--muted); }
+
+/* Form rows inside editor */
+.bills-form-grid { display: grid; gap: var(--space-4); }
+.bills-form-row { display: grid; gap: 6px; }
+.bills-form-row label { color: var(--muted); font-size: var(--fs-2); font-weight: 600; }
+.bills-error { color: #ef5350; font-size: 12px; }
+
+/* Modal action row (bottom of editor/discount form) */
+.bills-modal-actions {
+  margin-top: var(--space-3);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .bills-expand-grid { grid-template-columns: 1fr; }
+  .bills-modal-body--fullscreen { width: 98vw; height: 92vh; }
+}
+@media (max-width: 768px) {
+  .bills-header { flex-direction: column; align-items: stretch; gap: var(--space-3); }
+  .bills-actions { justify-content: space-between; }
+  .bills-input--search { min-width: 0; }
+}
+
+/* Optional light-theme fallbacks:
+:root {
+  --card: #fff;
+  --surface: #fff;
+  --text: #111;
+  --border: rgba(0,0,0,.08);
+}
+*/

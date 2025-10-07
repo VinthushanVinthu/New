@@ -1,0 +1,27 @@
+/* Scope everything to the shell so public pages (like Login) aren't affected */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  align-items: start;
+}
+
+/* Sidebar/Main rules apply only when inside the shell */
+.app-shell .app-shell__sidebar {
+  position: sticky;
+  top: 64px; /* under header */
+  height: calc(100dvh - 64px - var(--space-6));
+}
+
+.app-shell .app-shell__main {
+  min-width: 0;
+}
+
+/* Container is now shell-scoped; won’t touch the login page */
+.app-shell .app-container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-6);
+}

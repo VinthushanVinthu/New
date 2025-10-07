@@ -1,56 +1,337 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api.js";
-import "../styles/billing.css";
+import "../styles/billing.css"; // unchanged path; classes inside are all namespaced
 
-const MONEY = (n) => Number.isFinite(n) ? n.toFixed(2) : "0.00";
+const MONEY = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
+
+// Simple date-time for the invoice header
+const fmtDateTime = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ` +
+  `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+// Build a standalone HTML page for printing
+function buildInvoiceHtml({
+  billId,
+  shop,
+  customer,
+  rows,
+  subtotal,
+  discount,
+  taxPercent,
+  taxAmount,
+  total,
+  paymentMethod,
+  paymentRef,
+  amountPaid,
+  changeDue,
+}) {
+  const dateStr = fmtDateTime();
+
+  // Table rows (only lines with an item and qty>0)
+  const lineRows = rows
+    .filter((r) => r.item && Number(r.qty) > 0)
+    .map(
+      (r) => `
+      <tr>
+        <td>${r.item.name}</td>
+        <td style="text-align:right;">${MONEY(Number(r.item.price))}</td>
+        <td style="text-align:right;">${Number(r.qty)}</td>
+        <td style="text-align:right;">${MONEY(Number(r.item.price) * Number(r.qty))}</td>
+      </tr>
+    `
+    )
+    .join("");
+
+  return `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bill #${billId}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --border:#e5e7eb; --text:#111827; --muted:#6b7280; --ink:#111827;
+    }
+    body{ font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; color:var(--text); margin:0; padding:20px; }
+    .wrap{ max-width:800px; margin:0 auto; }
+    .head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px; }
+    h1{ font-size:20px; margin:0 0 4px; }
+    .muted{ color:var(--muted); font-size:12px; }
+    .card{ border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:14px; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:10px; border-bottom:1px solid var(--border); font-size:14px; }
+    th{ text-align:left; background:#fafafa; }
+    .right{ text-align:right; }
+    .totals{ margin-top:10px; display:grid; gap:6px; justify-items:end; font-size:14px; }
+    .totals div{ display:flex; gap:12px; }
+    .big{ font-weight:700; font-size:16px; }
+    .footer{ margin-top:18px; text-align:center; font-size:12px; color:var(--muted); }
+    @media print {
+      @page { margin: 12mm; }
+      body { padding:0; }
+      .card { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h1>${shop?.name || "Shop"}</h1>
+        <div class="muted">
+          ${shop?.address || ""}${shop?.address ? "<br/>" : ""}
+          ${shop?.city || ""} ${shop?.state || ""} ${shop?.zip || ""}<br/>
+          ${shop?.phone ? "Phone: " + shop.phone : ""}
+        </div>
+      </div>
+      <div class="right">
+        <div><b>Bill #</b> ${billId}</div>
+        <div class="muted">${dateStr}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>Customer</b><br/>
+      ${customer?.name || "-"}<br/>
+      ${customer?.phone || ""}${customer?.phone && customer?.email ? " · " : ""}${customer?.email || ""}
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th class="right">Price</th>
+            <th class="right">Qty</th>
+            <th class="right">Line Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lineRows || `<tr><td colspan="4" class="muted">No items</td></tr>`}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div><span>Subtotal:</span><span class="right">₹ ${MONEY(subtotal)}</span></div>
+        <div><span>Discount:</span><span class="right">₹ ${MONEY(discount)}</span></div>
+        <div><span>Tax (${taxPercent}%):</span><span class="right">₹ ${MONEY(taxAmount)}</span></div>
+        <div class="big"><span>Total:</span><span class="right">₹ ${MONEY(total)}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>Payment</b>
+      <div class="muted" style="margin-top:6px;">
+        Method: ${paymentMethod}${paymentRef ? ` · Ref: ${paymentRef}` : ""}<br/>
+        Paid: ₹ ${MONEY(amountPaid)}${paymentMethod === "Cash" ? ` · Change: ₹ ${MONEY(changeDue)}` : ""}
+      </div>
+    </div>
+
+    <div class="footer">Thank you for your purchase!</div>
+  </div>
+
+  <script>
+    // No auto-close here; iframe printing handles the close.
+  </script>
+</body>
+</html>
+`;
+}
+
+/* ========= NEW: Robust print via hidden iframe (no popups) ========= */
+function printHtmlViaIframe(html) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.src = url;
+
+  const cleanup = () => {
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      if (iframe && iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    }, 1000);
+  };
+
+  iframe.onload = () => {
+    try {
+      const w = iframe.contentWindow;
+      if (w) {
+        // Ensure render, then print
+        w.focus();
+        // Slight delay helps some browsers render fonts/layout before print
+        setTimeout(() => {
+          w.print();
+          cleanup();
+        }, 100);
+      } else {
+        cleanup();
+      }
+    } catch {
+      cleanup();
+    }
+  };
+
+  document.body.appendChild(iframe);
+}
+
+/* ===== Optional fallback: open a new tab if you really want it =====
+function openPrintWindowInNewTab(html) {
+  // Must be called directly from a user click to avoid blockers.
+  const win = window.open("", "_blank", "noopener,noreferrer,width=900,height=650");
+  if (!win) {
+    alert("Popup blocked. Your browser prevented opening a new tab.");
+    return false;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  return true;
+}
+*/
 
 export default function Billing() {
   const [shop, setShop] = useState(null);
+
+  // Inventory / rows
   const [sarees, setSarees] = useState([]);
   const [rows, setRows] = useState([{ id: Date.now(), item: null, qty: 0, error: "" }]);
 
+  // Totals
   const [discount, setDiscount] = useState(0);
   const [taxPercent, setTaxPercent] = useState(0);
 
   // Payment
   const [paymentMethod, setPaymentMethod] = useState("Cash"); // Cash | Card | UPI
-  const [paymentRef, setPaymentRef] = useState("");           // txn id / last 4 / UPI ref
-  const [amountTendered, setAmountTendered] = useState("");   // cash only
+  const [paymentRef, setPaymentRef] = useState("");
+  const [amountTendered, setAmountTendered] = useState("");
 
-  // Result
-  const [billId, setBillId] = useState(null);
-  const [invoiceItems, setInvoiceItems] = useState([]);       // snapshot for invoice
+  // Customer
+  const [customer, setCustomer] = useState(null); // selected customer row
+  const [phoneQuery, setPhoneQuery] = useState(""); // search by phone
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
+  const [newCust, setNewCust] = useState({ name: "", phone: "", email: "" });
+  const [customerBusy, setCustomerBusy] = useState(false);
+
+  // Result / UI
   const [isCreating, setIsCreating] = useState(false);
 
-  // Fetch shop and inventory
+  // ---------- data loaders ----------
+  const loadShopAndInventory = async () => {
+    const shopRes = await api.get("/shop/my");
+    const shopData = shopRes.data?.[0];
+    setShop(shopData || null);
+    setTaxPercent(Number(shopData?.tax_percentage) || 0);
+
+    if (shopData?.shop_id) {
+      const { data } = await api.get("/inventory/sarees", {
+        params: { shop_id: shopData.shop_id },
+      });
+      setSarees(Array.isArray(data) ? data : []);
+    } else {
+      setSarees([]);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
-        const shopRes = await api.get("/shop/my");
-        const shopData = shopRes.data?.[0];
-        setShop(shopData || null);
-        setTaxPercent(Number(shopData?.tax_percentage) || 0);
-
-        if (shopData?.shop_id) {
-          const { data } = await api.get("/inventory/sarees", {
-            params: { shop_id: shopData.shop_id },
-          });
-          setSarees(Array.isArray(data) ? data : []);
-        }
+        await loadShopAndInventory();
       } catch (err) {
         alert(err?.response?.data?.message || "Failed to load shop/inventory.");
       }
     })();
   }, []);
 
+  // ---------------- Customer helpers ----------------
+  async function findCustomerByPhone() {
+    if (!shop?.shop_id || !phoneQuery) {
+      alert("Enter phone to search.");
+      return;
+    }
+    setCustomerBusy(true);
+    try {
+      const { data } = await api.get("/customers/by-phone", {
+        params: { shop_id: shop.shop_id, phone: phoneQuery },
+      });
+      if (data) {
+        setCustomer(data);
+        setCreatingCustomer(false);
+        setNewCust({ name: "", phone: "", email: "" });
+      } else {
+        // not found → open create form prefilled with phone
+        setCustomer(null);
+        setCreatingCustomer(true);
+        setNewCust((p) => ({ ...p, phone: phoneQuery }));
+      }
+    } catch (e) {
+      alert(e?.response?.data?.message || "Failed to search customer.");
+    } finally {
+      setCustomerBusy(false);
+    }
+  }
+
+  async function createCustomer() {
+    if (!shop?.shop_id) return;
+    if (!newCust.phone) {
+      alert("Phone is required to create a customer.");
+      return;
+    }
+    setCustomerBusy(true);
+    try {
+      const { data } = await api.post("/customers", {
+        shop_id: shop.shop_id,
+        name: newCust.name || null,
+        phone: newCust.phone,
+        email: newCust.email || null,
+      });
+      setCustomer(data);
+      setCreatingCustomer(false);
+      setNewCust({ name: "", phone: "", email: "" });
+      setPhoneQuery(""); // clear search
+    } catch (e) {
+      // If duplicate we could auto pick returned id if your API returns it (409)
+      const m = e?.response?.data?.message;
+      if (e?.response?.status === 409 && e?.response?.data?.customer_id) {
+        setCustomer({
+          customer_id: e.response.data.customer_id,
+          name: newCust.name || "",
+          phone: newCust.phone || "",
+          email: newCust.email || "",
+        });
+        setCreatingCustomer(false);
+      } else {
+        alert(m || "Failed to create customer.");
+      }
+    } finally {
+      setCustomerBusy(false);
+    }
+  }
+
+  function clearCustomer() {
+    setCustomer(null);
+    setPhoneQuery("");
+    setCreatingCustomer(false);
+    setNewCust({ name: "", phone: "", email: "" });
+  }
+
+  // ---------------- Items table ----------------
   function handleSelect(rowId, sareeId) {
     setRows((prev) =>
       prev.map((r) =>
         r.id === rowId
           ? {
               ...r,
-              item:
-                sarees.find((s) => String(s.id) === String(sareeId)) || null,
+              item: sarees.find((s) => String(s.id) === String(sareeId)) || null,
               qty: 0,
               error: "",
             }
@@ -66,9 +347,8 @@ export default function Billing() {
         if (r.id !== rowId) return r;
         if (!r.item) return { ...r, qty: newQty, error: "" };
 
-        // FIX: use stock_quantity instead of qty
+        // respect stock_quantity (0 allowed)
         const maxQty = Number(r.item.stock_quantity) || 0;
-
         if (newQty > maxQty) {
           return { ...r, qty: maxQty, error: `Max available quantity: ${maxQty}` };
         }
@@ -88,18 +368,14 @@ export default function Billing() {
     setRows((prev) => prev.filter((r) => r.id !== rowId));
   }
 
-  // ---- Totals ----
+  // ---------------- Totals ----------------
   const selectedIds = useMemo(
-    () => rows.map((r) => r.item?.id).filter(Boolean),
+    () => rows.map((r) => (r.item ? Number(r.item.id) : null)).filter((v) => v != null),
     [rows]
   );
 
   const subtotal = useMemo(
-    () =>
-      rows.reduce(
-        (s, r) => s + (r.item ? Number(r.item.price) * Number(r.qty || 0) : 0),
-        0
-      ),
+    () => rows.reduce((s, r) => s + (r.item ? Number(r.item.price) * Number(r.qty || 0) : 0), 0),
     [rows]
   );
 
@@ -118,12 +394,11 @@ export default function Billing() {
     return Math.max(0, tendered - total);
   }, [paymentMethod, amountTendered, total]);
 
-  // ---- Validation helpers ----
+  // ---------------- Validation ----------------
   const hasRowIssues = rows.some(
     (r) =>
       !r.item ||
       Number(r.qty) <= 0 ||
-      // FIX: use stock_quantity instead of qty
       Number(r.qty) > Number(r.item?.stock_quantity || 0) ||
       Boolean(r.error)
   );
@@ -135,20 +410,65 @@ export default function Billing() {
       if (tendered + 1e-9 < total) return "Cash tendered is less than total.";
       return "";
     }
-    // Card/UPI – reference is optional but recommended
     return "";
   }, [paymentMethod, amountTendered, total]);
 
   const disableCreate =
     !shop?.shop_id ||
+    !customer?.customer_id || // must have a customer chosen/created first
     rows.length === 0 ||
     subtotal <= 0 ||
     hasRowIssues ||
     Boolean(paymentInvalid);
 
+  // ---------- reset helper ----------
+  const resetToNewBill = () => {
+    // Clear everything to a brand-new bill
+    setRows([{ id: Date.now(), item: null, qty: 0, error: "" }]);
+    setDiscount(0);
+    setPaymentMethod("Cash");
+    setPaymentRef("");
+    setAmountTendered("");
+    setCustomer(null);
+    setPhoneQuery("");
+    setCreatingCustomer(false);
+    setNewCust({ name: "", phone: "", email: "" });
+  };
+
+  // === NEW: Print Preview using current on-screen data (iframe, no popup) ===
+  function printPreview() {
+    const hasLines = rows.some((r) => r.item && Number(r.qty) > 0);
+    if (!hasLines) {
+      alert("Add at least one item with quantity before printing.");
+      return;
+    }
+    const billId = "(DRAFT)";
+    const html = buildInvoiceHtml({
+      billId,
+      shop,
+      customer,
+      rows,
+      subtotal,
+      discount: Number(cappedDiscount),
+      taxPercent: Number(taxPercent),
+      taxAmount: calculatedTax,
+      total,
+      paymentMethod,
+      paymentRef,
+      amountPaid: paymentMethod === "Cash" ? Number(amountTendered || 0) : Number(total || 0),
+      changeDue: cashChange,
+    });
+    printHtmlViaIframe(html);
+  }
+
+  // ---------------- Create Bill ----------------
   async function createBill() {
     if (disableCreate) {
-      alert(paymentInvalid || "Please fix errors before creating the bill.");
+      alert(
+        (paymentInvalid && paymentInvalid) ||
+          (!customer?.customer_id && "Please select or create a customer first.") ||
+          "Please fix errors before creating the bill."
+      );
       return;
     }
 
@@ -159,42 +479,41 @@ export default function Billing() {
 
     const payload = {
       shop_id: shop.shop_id,
+      customer_id: customer.customer_id,
       items,
       discount: Number(cappedDiscount),
-      tax: Number(calculatedTax),
-      // --- Payment data ---
-      payment_method: paymentMethod,         // "Cash" | "Card" | "UPI"
-      payment_reference: paymentRef || null, // txn id / last 4 / upi ref
-      amount_paid:
-        paymentMethod === "Cash" ? Number(amountTendered) : Number(total), // assume full paid for Card/UPI
+      payment_method: paymentMethod,
+      payment_reference: paymentRef || null,
+      amount_paid: paymentMethod === "Cash" ? Number(amountTendered) : Number(total),
     };
 
     try {
       setIsCreating(true);
       const { data } = await api.post("/billing/create", payload);
 
-      // Snapshot the invoice items before resetting the form
-      const snapshot = rows
-        .filter((r) => r.item && Number(r.qty) > 0)
-        .map((r) => ({
-          id: r.id,
-          name: r.item.name,
-          price: Number(r.item.price),
-          qty: Number(r.qty),
-          lineTotal: Number(r.item.price) * Number(r.qty),
-        }));
+      const billId = data?.bill_id ?? "—";
 
-      setInvoiceItems(snapshot);
-      setBillId(data.bill_id);
+      // Build & print via iframe (no popups)
+      const html = buildInvoiceHtml({
+        billId,
+        shop,
+        customer,
+        rows,
+        subtotal,
+        discount: Number(cappedDiscount),
+        taxPercent: Number(taxPercent),
+        taxAmount: calculatedTax,
+        total,
+        paymentMethod,
+        paymentRef,
+        amountPaid: payload.amount_paid,
+        changeDue: cashChange,
+      });
+      printHtmlViaIframe(html);
 
-      alert(`Bill #${data.bill_id} created successfully!`);
-
-      // Reset form (but keep tax % from shop)
-      setRows([{ id: Date.now(), item: null, qty: 0, error: "" }]);
-      setDiscount(0);
-      setPaymentMethod("Cash");
-      setPaymentRef("");
-      setAmountTendered("");
+      // Refresh inventory and reset
+      await loadShopAndInventory();
+      resetToNewBill();
     } catch (err) {
       alert(err?.response?.data?.message || "Failed to create bill.");
     } finally {
@@ -203,12 +522,105 @@ export default function Billing() {
   }
 
   return (
-    <div className="billing-page">
-      <div className="card billing-card">
-        <h2>Create Bill</h2>
+    <div className="bl-billing-page">
+      <div className="bl-card bl-billing-card">
+        <h2 className="bl-title">Create Bill</h2>
 
-        {/* Items Table */}
-        <table className="billing-table">
+        {/* ---------------- Customer Section ---------------- */}
+        <div className="bl-card-lite bl-customer-block">
+          <h3 className="bl-section-title">Customer</h3>
+
+          {!customer && !creatingCustomer && (
+            <div className="bl-customer-search">
+              <label className="bl-label">Search by Phone</label>
+              <div className="bl-row">
+                <input
+                  type="text"
+                  className="bl-input"
+                  placeholder="Enter phone number"
+                  value={phoneQuery}
+                  onChange={(e) => setPhoneQuery(e.target.value)}
+                />
+                <button className="bl-btn" onClick={findCustomerByPhone} disabled={customerBusy}>
+                  {customerBusy ? "Searching..." : "Find"}
+                </button>
+              </div>
+              <div className="bl-hint">If not found, you'll be prompted to create a new customer.</div>
+            </div>
+          )}
+
+          {!customer && creatingCustomer && (
+            <div className="bl-customer-create">
+              <div className="bl-grid-2">
+                <div className="bl-field">
+                  <label className="bl-label">Name</label>
+                  <input
+                    type="text"
+                    className="bl-input"
+                    value={newCust.name}
+                    onChange={(e) => setNewCust({ ...newCust, name: e.target.value })}
+                    placeholder="Customer name"
+                  />
+                </div>
+                <div className="bl-field">
+                  <label className="bl-label">Phone *</label>
+                  <input
+                    type="text"
+                    className="bl-input"
+                    value={newCust.phone}
+                    onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })}
+                    placeholder="Phone number"
+                  />
+                </div>
+                <div className="bl-field">
+                  <label className="bl-label">Email</label>
+                  <input
+                    type="email"
+                    className="bl-input"
+                    value={newCust.email}
+                    onChange={(e) => setNewCust({ ...newCust, email: e.target.value })}
+                    placeholder="Email (optional)"
+                  />
+                </div>
+              </div>
+              <div className="bl-row bl-actions-inline">
+                <button className="bl-btn" onClick={createCustomer} disabled={customerBusy}>
+                  {customerBusy ? "Creating..." : "Create & Use"}
+                </button>
+                <button className="bl-btn-outline" onClick={clearCustomer}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {customer && (
+            <div className="bl-customer-picked">
+              <div className="bl-picked-grid">
+                <div className="bl-picked-col">
+                  <div className="bl-picked-title">Selected Customer</div>
+                  <div className="bl-picked-line">
+                    <span>Name:</span> {customer.name || "-"}
+                  </div>
+                  <div className="bl-picked-line">
+                    <span>Phone:</span> {customer.phone || "-"}
+                  </div>
+                  <div className="bl-picked-line">
+                    <span>Email:</span> {customer.email || "-"}
+                  </div>
+                </div>
+                <div className="bl-picked-actions">
+                  <button className="bl-btn-outline" onClick={clearCustomer}>
+                    Change Customer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ---------------- Items Table ---------------- */}
+        <table className="bl-table">
           <thead>
             <tr>
               <th>Item</th>
@@ -225,17 +637,13 @@ export default function Billing() {
                   <select
                     value={r.item?.id || ""}
                     onChange={(e) => handleSelect(r.id, e.target.value)}
-                    className="select-item"
+                    className="bl-select"
                   >
                     <option value="">-- Select Item --</option>
                     {sarees
-                      .filter(
-                        (s) =>
-                          !selectedIds.includes(s.id) || s.id === r.item?.id
-                      )
+                      .filter((s) => !selectedIds.includes(Number(s.id)) || s.id === r.item?.id)
                       .map((s) => (
                         <option key={s.id} value={s.id}>
-                          {/* FIX: show stock_quantity */}
                           {s.name} (₹{MONEY(Number(s.price))}, Stock: {s.stock_quantity})
                         </option>
                       ))}
@@ -247,28 +655,20 @@ export default function Billing() {
                     min="0"
                     value={r.qty}
                     onChange={(e) => handleQty(r.id, e.target.value)}
-                    className="qty-input"
+                    className="bl-qty"
                   />
-                  {r.error && <div className="error-msg">{r.error}</div>}
+                  {r.error && <div className="bl-error">{r.error}</div>}
                 </td>
                 <td>{r.item ? `₹ ${MONEY(Number(r.item.price))}` : "-"}</td>
-                <td>
-                  {r.item
-                    ? `₹ ${MONEY(Number(r.item.price) * Number(r.qty || 0))}`
-                    : "-"}
-                </td>
+                <td>{r.item ? `₹ ${MONEY(Number(r.item.price) * Number(r.qty || 0))}` : "-"}</td>
                 <td>
                   <button
-                    className="btn-remove"
+                    className="bl-btn-remove"
                     onClick={() => removeRow(r.id)}
                     disabled={rows.length === 1}
-                    title={
-                      rows.length === 1
-                        ? "At least one row required"
-                        : "Remove row"
-                    }
+                    title={rows.length === 1 ? "At least one row required" : "Remove row"}
                   >
-                    X
+                    ×
                   </button>
                 </td>
               </tr>
@@ -276,29 +676,26 @@ export default function Billing() {
           </tbody>
         </table>
 
-        <button className="btn-add" onClick={addRow}>
+        <button className="bl-btn-add" onClick={addRow}>
           + Add More
         </button>
 
-        {/* Summary */}
-        <div className="billing-summary">
+        {/* ---------------- Summary ---------------- */}
+        <div className="bl-summary">
           <div>
             Subtotal: <b>₹ {MONEY(subtotal)}</b>
           </div>
-          <div>
-            Discount: ₹{" "}
+          <div className="bl-summary-row">
+            <span>Discount:</span>
             <input
               type="number"
               min="0"
               value={discount}
               onChange={(e) => setDiscount(e.target.value)}
-              className="discount-input"
+              className="bl-discount"
             />
             {Number(discount) > subtotal && (
-              <span className="error-inline">
-                {" "}
-                (capped at ₹ {MONEY(subtotal)})
-              </span>
+              <span className="bl-error-inline"> (capped at ₹ {MONEY(subtotal)})</span>
             )}
           </div>
           <div>Tax ({taxPercent}%): ₹ {MONEY(calculatedTax)}</div>
@@ -307,14 +704,14 @@ export default function Billing() {
           </div>
         </div>
 
-        {/* Payment Section */}
-        <div className="payment-section card-lite">
-          <h3 className="section-title">Payment</h3>
+        {/* ---------------- Payment ---------------- */}
+        <div className="bl-card-lite bl-payment">
+          <h3 className="bl-section-title">Payment</h3>
 
-          <div className="payment-row">
-            <label className="payment-label">Method</label>
+          <div className="bl-pay-row">
+            <label className="bl-pay-label">Method</label>
             <select
-              className="payment-select"
+              className="bl-select bl-pay-select"
               value={paymentMethod}
               onChange={(e) => {
                 setPaymentMethod(e.target.value);
@@ -330,36 +727,34 @@ export default function Billing() {
 
           {paymentMethod === "Cash" && (
             <>
-              <div className="payment-row">
-                <label className="payment-label">Amount Tendered</label>
+              <div className="bl-pay-row">
+                <label className="bl-pay-label">Amount Tendered</label>
                 <input
                   type="number"
-                  className="payment-input"
+                  className="bl-input bl-pay-input"
                   placeholder="Enter cash received"
                   value={amountTendered}
                   onChange={(e) => setAmountTendered(e.target.value)}
                   min="0"
                 />
               </div>
-              <div className="payment-row">
-                <label className="payment-label">Change Due</label>
-                <div className="payment-readonly">₹ {MONEY(cashChange)}</div>
+              <div className="bl-pay-row">
+                <label className="bl-pay-label">Change Due</label>
+                <div className="bl-readonly">₹ {MONEY(cashChange)}</div>
               </div>
             </>
           )}
 
           {paymentMethod !== "Cash" && (
-            <div className="payment-row">
-              <label className="payment-label">
+            <div className="bl-pay-row">
+              <label className="bl-pay-label">
                 {paymentMethod === "Card" ? "Card Ref / Last 4" : "UPI Ref"}
               </label>
               <input
                 type="text"
-                className="payment-input"
+                className="bl-input bl-pay-input"
                 placeholder={
-                  paymentMethod === "Card"
-                    ? "e.g., **** 1234 or Auth Code"
-                    : "e.g., UPI Txn ID"
+                  paymentMethod === "Card" ? "e.g., **** 1234 or Auth Code" : "e.g., UPI Txn ID"
                 }
                 value={paymentRef}
                 onChange={(e) => setPaymentRef(e.target.value)}
@@ -367,81 +762,37 @@ export default function Billing() {
             </div>
           )}
 
-          {paymentInvalid && (
-            <div className="error-msg" style={{ marginTop: 8 }}>
-              {paymentInvalid}
-            </div>
-          )}
+          {paymentInvalid && <div className="bl-error" style={{ marginTop: 8 }}>{paymentInvalid}</div>}
         </div>
 
-        {/* Actions */}
-        <div className="billing-actions">
+        {/* ---------------- Actions ---------------- */}
+        <div className="bl-actions">
           <button
-            className="btn-create"
+            className="bl-btn-outline"
+            onClick={printPreview}
+            title="Print a preview of this invoice"
+            disabled={rows.every((r) => !r.item || Number(r.qty) <= 0)}
+            style={{ marginRight: 8 }}
+          >
+            Print Preview
+          </button>
+
+          <button
+            className="bl-btn-create"
             onClick={createBill}
             disabled={disableCreate || isCreating}
-            title={disableCreate ? "Fix errors before creating bill" : "Create Bill"}
+            title={
+              disableCreate
+                ? !customer?.customer_id
+                  ? "Pick or create a customer first"
+                  : "Fix errors before creating bill"
+                : "Create Bill"
+            }
           >
             {isCreating ? "Creating..." : "Create Bill"}
           </button>
         </div>
       </div>
-
-      {/* Invoice Preview (after success) */}
-      {billId && (
-        <div className="card invoice-card">
-          <h3>Invoice #{billId}</h3>
-          <table className="billing-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th style={{ width: 110 }}>Qty</th>
-                <th style={{ width: 120 }}>Price</th>
-                <th style={{ width: 140 }}>Line Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoiceItems.map((it) => (
-                <tr key={it.id}>
-                  <td>{it.name}</td>
-                  <td>{it.qty}</td>
-                  <td>₹ {MONEY(it.price)}</td>
-                  <td>₹ {MONEY(it.lineTotal)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="billing-summary" style={{ textAlign: "right" }}>
-            <div>Subtotal: ₹ {MONEY(subtotal)}</div>
-            <div>Discount: ₹ {MONEY(cappedDiscount)}</div>
-            <div>Tax ({taxPercent}%): ₹ {MONEY(calculatedTax)}</div>
-            <div>
-              <b>Total: ₹ {MONEY(total)}</b>
-            </div>
-            <div className="payment-summary">
-              <span>
-                Payment Method: <b>{paymentMethod}</b>
-              </span>
-              {paymentMethod !== "Cash" && paymentRef ? (
-                <span style={{ marginLeft: 12 }}>
-                  Ref: <b>{paymentRef}</b>
-                </span>
-              ) : null}
-              {paymentMethod === "Cash" && (
-                <>
-                  <span style={{ marginLeft: 12 }}>
-                    Tendered: <b>₹ {MONEY(Number(amountTendered) || total)}</b>
-                  </span>
-                  <span style={{ marginLeft: 12 }}>
-                    Change: <b>₹ {MONEY(cashChange)}</b>
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
