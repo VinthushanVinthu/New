@@ -1,7 +1,8 @@
+// src/pages/ResetPassword.jsx
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // ✅ add navigate
 import { api } from "../lib/api.js";
-import "../styles/reset.css"; // ✅ New CSS
+import "../styles/reset.css";
 
 export default function ResetPassword() {
   const [otp, setOtp] = useState("");
@@ -9,6 +10,8 @@ export default function ResetPassword() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+
+  const navigate = useNavigate(); // ✅ init
 
   async function submit(e) {
     e.preventDefault();
@@ -25,8 +28,13 @@ export default function ResetPassword() {
       setMsg(data?.message || "Password reset successfully!");
       setOtp("");
       setNewPassword("");
+
+      // ✅ Redirect to login after 2 seconds
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (e2) {
-      setErr(e2?.response?.data?.message || "Something went wrong");
+      setErr(e2?.response?.data?.error || "Something went wrong");
     } finally {
       setBusy(false);
     }
