@@ -1,73 +1,200 @@
-/* Base layout bits assumed present globally:
-   body background, card base, etc. Keeping only page-specific here. */
+/* Manager Dashboard – Colorful Theme (matches Owner Dashboard)
+   Relies on your global CSS variables (accent, accent2, border, card, text, muted, radius, shadow, etc.)
+   No JSX changes required. Just replace your existing manager.css with this file.
+*/
 
-/* KPI */
+/* ==== Cards (same feel as Owner) ==== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  box-shadow: var(--shadow);
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 20px 50px rgba(2,6,23,.10); }
+
+/* ==== KPI Row (4-up like Owner’s kpi-grid) ==== */
 .kpi {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.kpi__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-200) 28%, transparent), transparent 60%),
+    var(--card);
+  box-shadow: var(--shadow);
 }
 .kpi__card h3 {
   margin: 0 0 6px 0;
-  color: var(--muted, #cbd5e1);
+  color: var(--muted);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 800;
+  letter-spacing: .2px;
 }
 .kpi__card h2 {
   margin: 0;
   font-size: 26px;
+  font-weight: 900;
   letter-spacing: .2px;
+  color: var(--text);
 }
 
-/* Section header */
-.section-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 10px;
+/* Subtle variety per slot (rainbow row, mirrors Owner) */
+.kpi .kpi__card:nth-child(1){
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-200) 34%, transparent), transparent 60%),
+    var(--card);
 }
-.section-header h3 { margin: 0; font-size: 18px; }
-
-/* Quick actions row */
-.qa-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+.kpi .kpi__card:nth-child(2){
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent2-200, #ffd1a8) 34%, transparent), transparent 60%),
+    var(--card);
 }
-
-/* Helpers */
-.error-msg { color: #ef5350; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
-.muted { opacity: 0.75; }
-.danger { color: #ffb3b3; }
-
-/* Table */
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  text-align: left;
+.kpi .kpi__card:nth-child(3){
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--info, #6366f1) 22%, transparent), transparent 65%),
+    var(--card);
+}
+.kpi .kpi__card:nth-child(4){
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--success, #16a34a) 22%, transparent), transparent 65%),
+    var(--card);
 }
 
-/* Two-column grid */
+/* ==== Two-column sections (same spacing as Owner) ==== */
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 12px 0;
+  gap: 14px;
+  margin: 18px 0;
 }
 
-/* Badges for status */
+/* ==== Section header (gradient ink like Owner) ==== */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.section-header h3 {
+  margin: 0; font-weight: 800; letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ==== Tables (copied style language from Owner) ==== */
+.table { width: 100%; border-collapse: collapse; }
+.table thead th {
+  font-weight: 800; font-size: 13px; letter-spacing: .3px; text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 8px;
+  text-align: left;
+}
+.table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 75%, transparent);
+}
+.table tbody tr:hover {
+  background: color-mix(in oklab, var(--accent-50, #f0f9ff) 65%, #fff 35%);
+}
+
+/* ==== Helpers (match Owner) ==== */
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+.muted { color: var(--muted); }
+.danger { color: color-mix(in oklab, #ff3b3b 85%, var(--text)); }
+
+/* ==== Status badges (same mapping/colors as Owner) ==== */
 .badge {
-  display: inline-block;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #1c2541;
-  border: 1px solid rgba(255,255,255,0.08);
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .2px;
+  padding: 6px 10px; border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--accent-100) 60%, #fff 40%);
+  color: var(--text);
 }
-.badge--paid     { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.35); }
-.badge--partial  { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); }
-.badge--unpaid   { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); }
+.badge::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-500);
+}
+.badge--paid{
+  background: color-mix(in oklab, var(--success) 18%, #fff 82%);
+  border-color: color-mix(in oklab, var(--success) 35%, var(--border));
+}
+.badge--paid::before { background: var(--success); }
+.badge--partial{
+  background: color-mix(in oklab, var(--warning) 18%, #fff 82%);
+  border-color: color-mix(in oklab, var(--warning) 35%, var(--border));
+}
+.badge--partial::before { background: var(--warning); }
+.badge--unpaid{
+  background: color-mix(in oklab, #ef4444 18%, #fff 82%);
+  border-color: color-mix(in oklab, #ef4444 35%, var(--border));
+}
+.badge--unpaid::before { background: #ef4444; }
 
-/* Payment bars */
+/* ==== Payment Mix bars (styled to match theme) ==== */
+.payment-bars { display: flex; flex-direction: column; gap: 10px; }
+.payment-row {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.payment-row > span:first-child { font-weight: 700; color: var(--text); }
+.bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent-100) 45%, #fff 55%);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.bar__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-500), var(--accent2-500));
+  box-shadow: 0 6px 16px color-mix(in oklab, var(--accent-500) 35%, transparent);
+  transition: width .4s ease;
+}
+
+/* ==== 14-Day Trend mini chart (bars with theme) ==== */
+.trend {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  align-items: end;
+  gap: 8px;
+  height: 160px;
+  padding: 6px 2px 0;
+  border: 1px dashed color-mix(in oklab, var(--border) 85%, transparent);
+  border-radius: 12px;
+  background:
+    radial-gradient(600px 300px at 0% 0%, color-mix(in oklab, var(--accent-50, #f0f9ff) 35%, transparent) 0%, transparent 60%),
+    var(--card);
+}
+.trend__col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.trend__bar {
+  width: 100%;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent-400) 65%, var(--accent2-400) 35%), var(--accent-600));
+  box-shadow: 0 12px 24px color-mix(in oklab, var(--accent-500) 28%, transparent);
+  transition: transform .2s ease, opacity .2s ease;
+}
+.trend__col:hover .trend__bar { transform: translateY(-3px); }
+.trend__label {
+  font-size: 11px; letter-spacing: .2px; color: var(--muted);
+}
+
+/* ==== Responsive (mirror Owner’s breakpoints) ==== */
+@media (max-width: 1100px) {
+  .kpi { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+  .two-col { grid-template-columns: 1fr; }
+}

@@ -1,87 +1,124 @@
-/* Reuse variables + base from your global styles */
+/* ========= Cashier Dashboard (Colorful Edition) =========
+   Uses --accent-* and --accent2-* from variables.css
+   Works in light/dark themes + accent swaps
+*/
 
-.page-title {
-  margin: 0 0 12px 0;
-  font-weight: 700;
-  letter-spacing: .2px;
+/* Page title with gradient ink */
+.page-title{
+  margin:0 0 16px 0; font-weight:900; letter-spacing:.2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 
-.kpi {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-5, 12px);
-  margin-bottom: 16px;
+/* ===== KPI Row ===== */
+.kpi{
+  display:grid; grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5, 20px); margin-bottom: 16px;
+}
+.kpi__card{
+  border:1px solid var(--border); border-radius: 18px; padding: 18px;
+  background:
+    radial-gradient(700px 360px at 0% 0%, color-mix(in oklab, var(--accent-200) 30%, transparent) 0%, transparent 60%),
+    var(--card);
+  box-shadow: var(--shadow);
+  transition: transform .12s ease, box-shadow .2s ease;
+}
+.kpi__card:hover{ transform: translateY(-2px); box-shadow: 0 20px 50px rgba(2,6,23,.10); }
+
+.kpi__card h3{
+  margin:0 0 6px 0; color: var(--muted); font-size: var(--fs-2, 14px); font-weight:700;
+}
+.kpi__card h2{
+  margin:0; font-size: 28px; letter-spacing:.2px; font-weight:900;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip:text; background-clip:text; color: transparent;
+}
+.kpi__card .mini{ margin-top:6px; color: var(--muted); font-size: 13px; }
+
+/* ===== Two columns ===== */
+.two-col{
+  display:grid; grid-template-columns:1fr 1fr;
+  gap: var(--space-5, 20px); margin-bottom: 16px;
 }
 
-.kpi__card h3 {
-  margin: 0 0 6px 0;
-  color: var(--muted, rgba(255,255,255,0.75));
-  font-size: var(--fs-2, 14px);
-  font-weight: 600;
+/* ===== Section header ===== */
+.section-header{
+  display:flex; align-items:baseline; justify-content:space-between;
+  margin-bottom: var(--space-4, 12px);
 }
-.kpi__card h2 {
-  margin: 0;
-  font-size: 26px;
-  letter-spacing: .2px;
-}
-.kpi__card .mini {
-  margin-top: 6px;
-  opacity: .85;
-  font-size: 13px;
+.section-header h3{
+  margin:0; font-size: var(--fs-h2, 22px); font-weight:900;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip:text; background-clip:text; color: transparent;
 }
 
-/* Two columns */
-.two-col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-5, 12px);
-  margin-bottom: 16px;
+/* ===== Card (glassy) ===== */
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.62));
+  border:1px solid var(--border); border-radius: var(--radius);
+  padding: var(--space-5); box-shadow: 0 14px 40px rgba(2,6,23,.08);
+  backdrop-filter: saturate(130%) blur(6px);
+  transition: transform .12s ease, box-shadow .2s ease;
+}
+.card:hover{ transform: translateY(-2px); box-shadow: 0 22px 60px rgba(2,6,23,.12); }
+html[data-theme="dark"] .card{
+  background: linear-gradient(180deg, rgba(18,26,43,.85), rgba(18,26,43,.70));
+  box-shadow: 0 18px 40px rgba(0,0,0,.45);
 }
 
-/* Section header */
-.section-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: var(--space-4, 10px);
+/* ===== Tables ===== */
+.table{ width:100%; border-collapse:separate; border-spacing:0; }
+.table thead th{
+  text-align:left; padding:12px; font-weight:800; font-size:13px; letter-spacing:.3px; text-transform:uppercase;
+  color: var(--muted); border-bottom:1px solid var(--border);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--accent-100) 70%, #fff 30%), transparent);
 }
-.section-header h3 { margin: 0; font-size: var(--fs-h2, 18px); }
-
-/* Card + table (aligned with your dark theme) */
-.card {
-  background: #3a506b;
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  margin-bottom: 16px;
+.table td{
+  padding:12px; border-bottom:1px solid var(--border); vertical-align:middle;
+}
+.table tbody tr:last-child td{ border-bottom:none; }
+.table tbody tr:hover{
+  background: color-mix(in oklab, var(--accent-50, #f0f9ff) 70%, #fff 30%);
 }
 
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  text-align: left;
+/* ===== Badges (status) ===== */
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800;
+  border:1px solid var(--border);
+  background: color-mix(in oklab, var(--accent-100) 60%, #fff 40%);
+  color: var(--text);
 }
-.table thead th { font-weight: 700; opacity: 0.9; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
+.badge::before{ content:""; width:8px; height:8px; border-radius:50%; background: var(--accent-500); }
 
-.badge {
-  display: inline-block;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #1c2541;
-  border: 1px solid rgba(255,255,255,0.08);
+.badge--paid{
+  background: color-mix(in oklab, #16a34a 18%, #fff 82%);
+  border-color: color-mix(in oklab, #16a34a 35%, var(--border));
 }
-.badge--paid     { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.35); }
-.badge--partial  { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); }
-.badge--unpaid   { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); }
+.badge--paid::before{ background:#16a34a; }
 
-.muted { opacity: .7; }
-.error-card { border: 1px solid rgba(239,68,68,0.6); background: rgba(239,68,68,0.1); }
+.badge--partial{
+  background: color-mix(in oklab, #f59e0b 18%, #fff 82%);
+  border-color: color-mix(in oklab, #f59e0b 35%, var(--border));
+}
+.badge--partial::before{ background:#f59e0b; }
 
-/* Responsive */
-@media (max-width: 1100px) {
-  .kpi { grid-template-columns: 1fr; }
-  .two-col { grid-template-columns: 1fr; }
+.badge--unpaid{
+  background: color-mix(in oklab, #ef4444 18%, #fff 82%);
+  border-color: color-mix(in oklab, #ef4444 35%, var(--border));
+}
+.badge--unpaid::before{ background:#ef4444; }
+
+/* Utilities */
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+.muted{ color: var(--muted); }
+.error-card{
+  border:1px solid color-mix(in oklab, #ef4444 60%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklab, #ef4444 12%, transparent), transparent 70%), var(--card);
+}
+
+/* ===== Responsive ===== */
+@media (max-width:1100px){
+  .kpi{ grid-template-columns:1fr; }
+  .two-col{ grid-template-columns:1fr; }
 }

@@ -1,143 +1,163 @@
-:root {
-  --reset-bg: radial-gradient(1200px 800px at 80% -10%, #1a2032 0%, #0b0c10 60%);
-  --reset-card: #141c2f;
-  --reset-surface: #0f1629;
-  --reset-border: rgba(120,120,120,.25);
-  --reset-text: #e7eaf3;
-  --reset-muted: #9aa3b2;
-  --reset-primary: #2563eb;
-  --reset-primary-ink: #ffffff;
-  --reset-radius: 14px;
-}
+/* Reset Password – Colorful Theme (matches Owner/Manager dashboards)
+   Uses your global variables: --card, --surface, --border, --radius, --shadow,
+   --text, --muted, --accent-50/100/200/400/500/600, --accent2-500, --ring,
+   --primary, --primary-ink, --space-4/5, etc.
+*/
 
-/* Full page */
+/* ===== Full-page center ===== */
 .reset-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--reset-bg);
   padding: 20px;
+
+  /* soft themed background */
+  background:
+    radial-gradient(1200px 600px at 80% -10%,
+      color-mix(in oklab, var(--accent-50, #f0f9ff) 35%, transparent) 0%,
+      transparent 60%),
+    radial-gradient(900px 500px at 0% 100%,
+      color-mix(in oklab, var(--accent2-500, #f59e0b) 10%, transparent) 0%,
+      transparent 65%),
+    var(--bg, #0b1220);
 }
 
-/* Card */
+/* ===== Card (same feel as dashboards) ===== */
 .reset-card {
-  background: var(--reset-card);
-  border: 1px solid var(--reset-border);
-  border-radius: var(--reset-radius);
-  padding: 32px 28px;
-  max-width: 400px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  max-width: 420px;
   width: 100%;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow);
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
 }
+.reset-card:hover { transform: translateY(-2px); box-shadow: 0 20px 50px rgba(2,6,23,.10); }
 
+/* Title with gradient ink */
 .reset-title {
-  margin: 0 0 20px;
-  color: var(--reset-text);
+  margin: 0 0 16px;
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 900;
+  letter-spacing: .2px;
   text-align: center;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-/* Form */
-.reset-form {
-  display: grid;
-  gap: 16px;
-}
+/* ===== Form layout ===== */
+.reset-form { display: grid; gap: 16px; }
 
-.reset-field {
-  display: grid;
-  gap: 6px;
-}
-
+.reset-field { display: grid; gap: 6px; }
 .reset-label {
-  color: var(--reset-muted);
+  color: var(--muted);
   font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .2px;
 }
 
+/* Inputs with the same colorful focus behavior as app forms */
 .reset-input {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--reset-border);
-  background: var(--reset-surface);
-  color: var(--reset-text);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-50, #f0f9ff) 8%, transparent), transparent 70%),
+    var(--card);
+  color: var(--text);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color .18s ease, box-shadow .22s ease, background .22s ease, transform .06s ease;
 }
-
+.reset-input:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px color-mix(in oklab, var(--accent-500) 12%, transparent);
+}
 .reset-input:focus {
-  border-color: var(--reset-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+  border-color: color-mix(in oklab, var(--accent-500) 40%, var(--border));
+  box-shadow:
+    0 0 0 3px var(--ring),
+    0 16px 40px color-mix(in oklab, var(--accent-500) 18%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-100) 16%, transparent), transparent 70%),
+    var(--card);
 }
 
-/* Button */
+/* Normalize appearance for any input types if linters care */
+.reset-input {
+  appearance: none;          /* standard */
+  -webkit-appearance: none;  /* safari/chrome */
+  -moz-appearance: none;     /* firefox */
+}
+
+/* ===== Button styled like primary buttons elsewhere ===== */
 .reset-btn {
-  background: var(--reset-primary);
-  color: var(--reset-primary-ink);
-  border: none;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.2s ease;
   width: 100%;
   margin-top: 6px;
-}
+  cursor: pointer;
 
-.reset-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
-}
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 
-.reset-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 700;
+  letter-spacing: .2px;
 
-/* Links */
+  color: var(--primary-ink);
+  background: linear-gradient(135deg, var(--accent-500), var(--accent2-500));
+  box-shadow: 0 16px 40px color-mix(in oklab, var(--accent-500) 30%, transparent);
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+}
+.reset-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(2,6,23,.15); }
+.reset-btn:disabled { opacity: .65; cursor: not-allowed; box-shadow: none; }
+
+/* ===== Links ===== */
 .reset-actions {
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
 }
-
 .reset-link {
-  color: var(--reset-primary);
+  color: var(--accent-600);
   font-size: 13px;
   text-decoration: none;
 }
+.reset-link:hover { text-decoration: underline; }
+.small-text { font-size: 12px; }
 
-.reset-link:hover {
-  text-decoration: underline;
-}
-
-/* Messages */
-.reset-success {
-  color: #4caf50;
-  font-size: 13px;
-  margin-bottom: 10px;
-  text-align: center;
-}
-
+/* ===== Messages (themed like dashboards) ===== */
+.reset-success,
 .reset-error {
-  color: #ef5350;
   font-size: 13px;
   margin-bottom: 10px;
   text-align: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.reset-success {
+  color: color-mix(in oklab, #16a34a 85%, var(--text));
+  border-color: color-mix(in oklab, #16a34a 45%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in oklab, #16a34a 12%, transparent), transparent 70%),
+    var(--card);
+}
+.reset-error {
+  color: color-mix(in oklab, #ef4444 85%, var(--text));
+  border-color: color-mix(in oklab, #ef4444 45%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in oklab, #ef4444 12%, transparent), transparent 70%),
+    var(--card);
 }
 
-.small-text {
-  font-size: 12px;
-}
-
-/* Responsive */
+/* ===== Responsive ===== */
 @media (max-width: 480px) {
-  .reset-card {
-    padding: 24px 20px;
-  }
-
-  .reset-title {
-    font-size: 20px;
-  }
+  .reset-card { padding: 24px 20px; }
+  .reset-title { font-size: 20px; }
 }

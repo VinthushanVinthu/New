@@ -1,39 +1,99 @@
-* { box-sizing: border-box; }
-html, body, #root { height: 100%; }
-body {
-  margin: 0;
-  background: radial-gradient(1200px 800px at 80% -10%, #1a2032 0%, #0b0c10 60%), var(--bg);
-  background-attachment: fixed; /* ✅ keeps background fixed */
-  background-repeat: no-repeat;
-  background-size: cover;
-  color: var(--text);
-  font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{
+  margin:0; color:var(--text);
+  font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,'Noto Sans',sans-serif;
+  /* Colorful layered background */
+  background:
+    radial-gradient(1200px 700px at 90% -10%, color-mix(in oklab, var(--accent-400) 25%, transparent) 0%, transparent 60%),
+    radial-gradient(900px 600px at -10% 40%, color-mix(in oklab, var(--accent2-400) 22%, transparent) 0%, transparent 60%),
+    var(--bg);
+  background-attachment: fixed; background-repeat: no-repeat; background-size: cover;
 }
 
+/* Links & lists */
+a{color:inherit;text-decoration:none}
+ul{margin:0;padding:0;list-style:none}
 
-a { color: inherit; text-decoration: none; }
-ul { margin: 0; padding: 0; list-style: none; }
-
-.card {
-  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00));
+/* Fancy Card */
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.6));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-5);
   box-shadow: var(--shadow);
+  backdrop-filter: saturate(1.2) blur(6px);
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.card:hover{ transform: translateY(-2px); box-shadow: 0 20px 50px rgba(2,6,23,.12); }
+
+/* In dark, keep glass readable */
+html[data-theme="dark"] .card{
+  background: linear-gradient(180deg, rgba(18,26,43,.85), rgba(18,26,43,.6));
 }
 
-.muted { color: var(--muted); }
-
-.btn {
-  appearance: none; border: 1px solid var(--border);
-  padding: 8px 14px; border-radius: 10px;
-  cursor: pointer; background: var(--surface); color: var(--text);
+/* Buttons */
+.btn{
+  appearance:none; border:1px solid var(--border); padding:10px 16px;
+  border-radius:12px; cursor:pointer; background:var(--surface); color:var(--text);
   transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+  box-shadow: 0 2px 8px rgba(2,6,23,.06);
 }
-.btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
-.btn:active { transform: translateY(0); }
+.btn:hover{ transform: translateY(-1px); box-shadow: 0 10px 28px rgba(2,6,23,.10) }
+.btn:active{ transform: translateY(0) }
+.btn--primary{
+  color:white; border-color:transparent;
+  background: linear-gradient(90deg, var(--accent-500), var(--accent2-500));
+}
+.btn--secondary{
+  background: color-mix(in oklab, var(--accent-200) 50%, #fff 50%);
+  color: var(--text);
+}
+.btn--ghost{ background:transparent }
+.btn--block{ width:100% }
 
-.btn--primary { background: var(--primary); color: var(--primary-ink); border-color: transparent; }
-.btn--secondary { background: #1f2937; }
-.btn--ghost { background: transparent; }
-.btn--block { width: 100%; }
+/* Inputs */
+.input,.select,.textarea{
+  width:100%; padding:12px 14px; background:var(--surface); color:var(--text);
+  border:1px solid var(--border); border-radius:12px; outline:none;
+  transition:border-color .15s, box-shadow .15s, background .2s;
+}
+.input:focus,.select:focus,.textarea:focus{
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 5px var(--ring);
+}
+
+/* Pretty gradient border utility */
+.gradient-border{
+  position:relative; border-radius:18px; padding:2px; background:
+    linear-gradient(120deg, var(--accent-500), var(--accent2-500));
+}
+.gradient-border > .inside{
+  background: var(--card); border-radius:16px; padding: var(--space-5);
+}
+
+/* Pills / badges */
+.badge{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+  font-weight:600; border-radius:999px; border:1px solid var(--border);
+  background: color-mix(in oklab, var(--accent-100) 60%, #fff 40%); }
+.badge--success{ background: color-mix(in oklab, var(--success) 20%, #fff 80%); }
+.badge--warn{ background: color-mix(in oklab, var(--warning) 20%, #fff 80%); }
+.badge--info{ background: color-mix(in oklab, var(--info) 20%, #fff 80%); }
+
+/* Container */
+.container{ width:100%; max-width:var(--container-max); margin:0 auto; padding:24px; }
+
+/* Colorful divider */
+.hr{
+  height:1px; border:0; background:
+    linear-gradient(90deg, transparent, var(--accent-400), var(--accent2-500), transparent);
+  opacity:.6; margin: 18px 0;
+}
+
+/* Dark background tune */
+html[data-theme="dark"] body{
+  background:
+    radial-gradient(1200px 700px at 90% -10%, color-mix(in oklab, var(--accent-500) 20%, transparent) 0%, transparent 60%),
+    radial-gradient(900px 600px at -10% 40%, color-mix(in oklab, var(--accent2-500) 18%, transparent) 0%, transparent 60%),
+    var(--bg);
+}

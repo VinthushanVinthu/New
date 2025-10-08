@@ -1,3 +1,4 @@
+// src/pages/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
@@ -31,16 +32,16 @@ export default function Login() {
   }
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <h2 className="login-title">Login</h2>
+    <div className="auth-page">
+      <div className="auth-card">
+        <h2 className="auth-title">Login</h2>
 
-        <form onSubmit={submit} className="login-form">
-          <div className="login-field">
-            <label htmlFor="login-email" className="login-label">Email</label>
+        <form onSubmit={submit} className="auth-form">
+          <div className="auth-field">
+            <label htmlFor="auth-email" className="auth-label">Email</label>
             <input
-              id="login-email"
-              className="login-input"
+              id="auth-email"
+              className="auth-input"
               placeholder="you@example.com"
               type="email"
               value={email}
@@ -50,11 +51,11 @@ export default function Login() {
             />
           </div>
 
-          <div className="login-field">
-            <label htmlFor="login-password" className="login-label">Password</label>
+          <div className="auth-field">
+            <label htmlFor="auth-password" className="auth-label">Password</label>
             <input
-              id="login-password"
-              className="login-input"
+              id="auth-password"
+              className="auth-input"
               placeholder="••••••••"
               type="password"
               value={password}
@@ -64,21 +65,21 @@ export default function Login() {
             />
           </div>
 
-          {err && <div className="login-error">{err}</div>}
+          {err && <div className="auth-error">{err}</div>}
 
-          <div className="login-actions">
-            <button className="login-btn" type="submit" disabled={busy}>
+          <div className="auth-actions">
+            <button className="auth-btn" type="submit" disabled={busy}>
               {busy ? 'Signing in…' : 'Login'}
             </button>
 
-            <Link to="/forgot" className="login-link small-text">
+            <Link to="/forgot" className="auth-link auth-text--sm">
               Forgot Password?
             </Link>
           </div>
         </form>
 
-        <p className="login-footer">
-          New here? <Link className="login-link" to="/register">Create an account</Link>
+        <p className="auth-footer">
+          New here? <Link className="auth-link" to="/register">Create an account</Link>
         </p>
       </div>
     </div>

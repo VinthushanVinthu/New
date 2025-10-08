@@ -1,33 +1,154 @@
-.sidebar {
-  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+/* ===== Colorful Sidebar (glass + accent-aware) ===== */
+
+.sidebar{
+  background:
+    radial-gradient(700px 300px at 100% 0%,
+      color-mix(in oklab, var(--accent-400) 16%, transparent) 0%,
+      transparent 60%),
+    radial-gradient(600px 260px at 0% 0%,
+      color-mix(in oklab, var(--accent2-400) 12%, transparent) 0%,
+      transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.60));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-5);
   box-shadow: var(--shadow);
+  backdrop-filter: saturate(145%) blur(8px);
+  position: relative;
+  overflow: hidden;
 }
 
-.sidebar__title {
-  font-weight: 700;
+/* subtle gradient hairline at top */
+.sidebar::before{
+  content:"";
+  position:absolute; left:0; right:0; top:-1px; height:2px;
+  background: linear-gradient(90deg, transparent, var(--accent-500), var(--accent2-500), transparent);
+  opacity:.6;
+}
+
+.sidebar__title{
+  font-weight: 900;
+  margin-bottom: var(--space-4);
+  letter-spacing: .3px;
+  background: linear-gradient(90deg, var(--accent-700), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* ===== Nav ===== */
+.sidebar__nav{
+  display: grid; gap: 8px; margin-bottom: var(--space-5);
+}
+
+/* link base */
+.sidebar-link{
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--text);
+  background: linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.45));
+  transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+  box-shadow: 0 2px 8px rgba(2,6,23,.06);
+  backdrop-filter: saturate(120%);
+}
+
+/* colorful bullet */
+.sidebar-link::before{
+  content:"";
+  width:10px; height:10px; border-radius:50%;
+  background: linear-gradient(120deg, var(--accent-500), var(--accent2-500));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent-200) 28%, transparent);
+}
+
+/* hover */
+.sidebar-link:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(2,6,23,.12);
+  border-color: var(--border);
+}
+
+/* active (vivid pill) */
+.sidebar-link.active{
+  color: #fff;
+  border-color: transparent;
+  background:
+    linear-gradient(120deg, var(--accent-600), var(--accent2-500));
+  box-shadow:
+    0 8px 26px color-mix(in oklab, var(--accent-500) 28%, transparent),
+    inset 0 0 0 1px rgba(255,255,255,.18);
+}
+.sidebar-link.active::before{
+  background: #fff;
+  box-shadow: 0 0 0 4px color-mix(in oklab, #ffffff 28%, transparent);
+}
+
+/* keyboard focus */
+.sidebar-link:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px var(--ring), 0 10px 26px rgba(2,6,23,.12);
+  border-color: var(--accent-500);
+}
+
+/* ===== Optional icons by path (no JSX changes) */
+.sidebar-link[href*="/owner"]::after{ content:"🏠"; margin-left:auto; }
+.sidebar-link[href*="/manager"]::after{ content:"📊"; margin-left:auto; }
+.sidebar-link[href*="/cashier"]::after{ content:"🧮"; margin-left:auto; }
+.sidebar-link[href*="/staff"]::after{ content:"👥"; margin-left:auto; }
+.sidebar-link[href*="/inventory"]::after{ content:"📦"; margin-left:auto; }
+.sidebar-link[href*="/billing"]::after{ content:"🧾"; margin-left:auto; }
+.sidebar-link[href*="/bills"]::after{ content:"💳"; margin-left:auto; }
+.sidebar-link[href*="/customers"]::after{ content:"🧑‍🤝‍🧑"; margin-left:auto; }
+.sidebar-link[href*="/settings"]::after{ content:"⚙️"; margin-left:auto; }
+
+/* ===== Shop card ===== */
+.sidebar-shop.card{
+  padding: var(--space-4);
+  border-radius: 16px;
+  /* gradient ring frame */
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(120deg, var(--accent-500), var(--accent2-500)) border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 8px 22px rgba(2,6,23,.08);
+}
+
+.sidebar-shop__header{
+  font-weight: 800;
   margin-bottom: var(--space-3);
+  letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-.sidebar__nav { display: grid; gap: 6px; margin-bottom: var(--space-5); }
-
-.sidebar-link {
-  display: block; padding: 10px 12px; border-radius: 10px;
-  border: 1px solid transparent; color: var(--text);
-  transition: background .2s ease, border-color .2s ease, transform .06s ease;
+.sidebar-shop__row{
+  display: flex; justify-content: space-between; gap: 10px; padding: 8px 0;
+  border-bottom: 1px dashed color-mix(in oklab, var(--border) 80%, transparent);
 }
-.sidebar-link:hover { background: var(--surface); border-color: var(--border); transform: translateY(-1px); }
-.sidebar-link.active {
-  background: linear-gradient(180deg, rgba(79,70,229,.2), rgba(79,70,229,.08));
-  border-color: var(--ring);
+.sidebar-shop__row:last-child{ border-bottom: 0; }
+
+.sidebar-shop__row .label{ color: var(--muted); font-size: var(--fs-2); }
+.sidebar-shop__row .value{ font-weight: 700; }
+
+/* Tiny colorful chips inside values, if you want */
+.sidebar .chip{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 8px; border-radius:999px; font-weight:700;
+  background: color-mix(in oklab, var(--accent-100) 65%, #fff 35%);
+  border: 1px solid var(--border);
+  font-size: 12px;
 }
 
-.sidebar-shop.card { padding: var(--space-4); }
-.sidebar-shop__header { font-weight: 600; margin-bottom: var(--space-3); }
-.sidebar-shop__row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; }
-.sidebar-shop__row .label { color: var(--muted); font-size: var(--fs-2); }
-.sidebar-shop__row .value { font-weight: 600; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
-.sidebar-shop__empty { color: var(--muted); font-size: var(--fs-2); }
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
+.sidebar-shop__empty{ color: var(--muted); font-size: var(--fs-2); }
+
+/* ===== Dark polish ===== */
+html[data-theme="dark"] .sidebar{
+  background:
+    radial-gradient(700px 300px at 100% 0%, color-mix(in oklab, var(--accent-500) 18%, transparent) 0%, transparent 60%),
+    radial-gradient(600px 260px at 0% 0%, color-mix(in oklab, var(--accent2-500) 14%, transparent) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(18,26,43,.88), rgba(18,26,43,.68));
+}
+html[data-theme="dark"] .sidebar-link{
+  background: linear-gradient(180deg, rgba(18,26,43,.88), rgba(18,26,43,.70));
+}

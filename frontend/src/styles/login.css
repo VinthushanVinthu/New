@@ -1,142 +1,147 @@
-:root {
-  --login-bg: radial-gradient(1200px 800px at 80% -10%, #1a2032 0%, #0b0c10 60%);
-  --login-surface: #0f1629;
-  --login-card: #141c2f;
-  --login-border: rgba(120,120,120,.25);
-  --login-text: #e7eaf3;
-  --login-muted: #9aa3b2;
-  --login-primary: #2563eb;
-  --login-primary-ink: #ffffff;
-  --login-radius: 14px;
+/* ========= Login (Colorful Edition) =========
+   Mirrors the Create Shop card look & feel.
+   Requires your design tokens in variables.css:
+   --accent-*, --accent2-*, --card, --border, --text, --muted, --ring, --radius, --space-*
+*/
+
+/* Page wrapper */
+.auth-page{
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background:
+    radial-gradient(900px 420px at 100% 0%,
+      color-mix(in oklab, var(--accent-300) 10%, transparent) 0%, transparent 55%),
+    radial-gradient(820px 380px at 0% 100%,
+      color-mix(in oklab, var(--accent2-300) 10%, transparent) 0%, transparent 55%);
+}
+html[data-theme="dark"] .auth-page{
+  background:
+    radial-gradient(900px 420px at 100% 0%,
+      color-mix(in oklab, var(--accent-600) 18%, transparent) 0%, transparent 60%),
+    radial-gradient(820px 380px at 0% 100%,
+      color-mix(in oklab, var(--accent2-600) 16%, transparent) 0%, transparent 60%);
 }
 
-/* Full page layout */
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--login-bg);
-  padding: 20px;
+/* Card */
+.auth-card{
+  width: min(760px, 100%);
+  display: grid; gap: var(--space-5);
+  padding: var(--space-6);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(700px 320px at 100% 0%,
+      color-mix(in oklab, var(--accent-400) 14%, transparent) 0%, transparent 60%),
+    radial-gradient(640px 280px at 0% 0%,
+      color-mix(in oklab, var(--accent2-400) 12%, transparent) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.68));
+  box-shadow: 0 14px 40px rgba(2,6,23,.08);
+  backdrop-filter: saturate(130%) blur(6px);
+}
+html[data-theme="dark"] .auth-card{
+  background:
+    radial-gradient(700px 320px at 100% 0%,
+      color-mix(in oklab, var(--accent-500) 16%, transparent) 0%, transparent 60%),
+    radial-gradient(640px 280px at 0% 0%,
+      color-mix(in oklab, var(--accent2-500) 14%, transparent) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(18,26,43,.92), rgba(18,26,43,.78));
+  box-shadow: 0 18px 46px rgba(0,0,0,.45);
 }
 
-/* Login card */
-.login-card {
-  background: var(--login-card);
-  border: 1px solid var(--login-border);
-  border-radius: var(--login-radius);
-  padding: 32px 28px;
-  max-width: 400px;
-  width: 100%;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+/* Title (gradient ink) */
+.auth-title{
+  margin: 0;
+  font-weight: 900; letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-.login-title {
-  margin: 0 0 20px;
-  color: var(--login-text);
-  font-size: 24px;
+/* Form layout */
+.auth-form{ display: grid; gap: var(--space-4); }
+.auth-field{ display: grid; gap: 6px; }
+
+.auth-label{
+  color: var(--muted);
+  font-size: var(--fs-2);
   font-weight: 700;
-  text-align: center;
+  letter-spacing: .2px;
 }
 
-/* Form */
-.login-form {
-  display: grid;
-  gap: 16px;
-}
-
-.login-field {
-  display: grid;
-  gap: 6px;
-}
-
-.login-label {
-  color: var(--login-muted);
-  font-size: 13px;
-}
-
-.login-input {
+/* Inputs (glassy + ring) */
+.auth-input{
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--login-border);
-  background: var(--login-surface);
-  color: var(--login-text);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
   outline: none;
-  transition: border-color .2s ease, box-shadow .2s ease;
+  transition: border-color .15s, box-shadow .15s, background .2s, transform .06s;
+  box-shadow: 0 2px 8px rgba(2,6,23,.04) inset;
 }
-
-.login-input:focus {
-  border-color: var(--login-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, .35);
+.auth-input:focus{
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 5px var(--ring);
+  transform: translateY(-1px);
 }
 
 /* Error */
-.login-error {
-  color: #ef5350;
-  font-size: 13px;
-  margin-top: -4px;
+.auth-error{
+  color: #ef5350; font-weight: 600;
+  background: linear-gradient(180deg, color-mix(in oklab, #ef4444 12%, transparent), transparent 70%);
+  border: 1px solid color-mix(in oklab, #ef4444 40%, var(--border));
+  padding: 10px 12px; border-radius: 12px;
 }
 
 /* Actions */
-.login-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
+.auth-actions{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 4px;
 }
 
-.login-btn {
-  background: var(--login-primary);
-  color: var(--login-primary-ink);
-  border: none;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform .1s ease, box-shadow .2s ease;
+/* Primary button (matches Create Shop .btn.btn--primary) */
+.auth-btn{
+  appearance: none; border: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 800; letter-spacing: .2px;
+  background: linear-gradient(120deg, var(--accent-600), var(--accent2-500));
+  color: #fff; cursor: pointer;
+  box-shadow:
+    0 10px 28px color-mix(in oklab, var(--accent-500) 26%, transparent),
+    inset 0 0 0 1px rgba(255,255,255,.18);
+  transition: transform .08s, box-shadow .2s, filter .2s, opacity .2s;
 }
+.auth-btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 28px rgba(2,6,23,.10); }
+.auth-btn:disabled{ opacity: .7; cursor: not-allowed; }
 
-.login-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(37, 99, 235, .4);
-}
-
-.login-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.login-link {
-  color: var(--login-primary);
-  font-size: 13px;
+/* Links */
+.auth-link{
+  font-weight: 700;
+  color: color-mix(in oklab, var(--accent-700, #0ea5e9) 70%, var(--text) 30%);
   text-decoration: none;
-  transition: color .2s ease;
 }
+.auth-link:hover{ text-decoration: underline; }
 
-.login-link:hover {
-  text-decoration: underline;
-}
+.auth-text--sm{ font-size: var(--fs-2); }
 
 /* Footer */
-.login-footer {
-  margin-top: 20px;
-  text-align: center;
-  color: var(--login-muted);
-  font-size: 13px;
+.auth-footer{
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-2);
 }
 
-.small-text {
-  font-size: 12px;
+/* Small screens */
+@media (max-width: 560px){
+  .auth-card{ padding: var(--space-5); }
+  .auth-actions{ flex-direction: column; align-items: stretch; }
+  .auth-btn{ width: 100%; }
 }
 
-/* Responsive */
-@media (max-width: 480px) {
-  .login-card {
-    padding: 24px 20px;
-  }
-
-  .login-title {
-    font-size: 20px;
-  }
+/* Bonus: subtle success accent on focus within the form */
+.auth-form:has(.auth-input:focus) .auth-title{
+  filter: brightness(1.05);
 }

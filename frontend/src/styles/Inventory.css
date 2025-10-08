@@ -1,147 +1,200 @@
-/* Page wrapper */
-.inventory-page {
-  display: grid;
-  gap: var(--space-6);
+/* ========= Inventory (Colorful Edition) =========
+   Uses --accent-* / --accent2-* if available (falls back if not).
+   No JSX changes needed.
+*/
+
+/* Fallback accent palette (only used if your globals don't define these) */
+:root{
+  --accent-50:#eef2ff; --accent-100:#e0e7ff; --accent-200:#c7d2fe;
+  --accent-400:#818cf8; --accent-500:#6366f1; --accent-600:#4f46e5;
+  --accent2-400:#fb923c; --accent2-500:#f97316;
 }
 
-/* Header within the card (title + actions) */
-.section-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-.section-header h3 { margin: 0; font-size: var(--fs-h2); }
-.section-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-/* Loading / error */
-.loading { color: var(--muted); padding: 12px; }
-.error-msg { color: #ef5350; }
-
-/* Table wrapper + table (same look as Customers/Billing) */
-.table-wrap {
-  width: 100%;
-  overflow: auto;
+/* ===== Page wrapper with ambient orbs ===== */
+.inventory-page{
+  display:grid; gap:var(--space-6);
+  background:
+    radial-gradient(900px 520px at 110% -10%, color-mix(in oklab, var(--accent-400) 16%, transparent) 0%, transparent 60%),
+    radial-gradient(820px 460px at -10% 0%, color-mix(in oklab, var(--accent2-400) 14%, transparent) 0%, transparent 55%);
   border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
-}
-.table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-.table thead th {
-  text-align: left;
-  padding: 12px;
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border);
-  background: rgba(255,255,255,.02);
-  position: sticky;
-  top: 0;
-  z-index: 1; /* keep under modal */
-}
-.table tbody td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-.table tbody tr:last-child td { border-bottom: none; }
-.empty { text-align: center; color: var(--muted); padding: 18px; }
-
-/* Modal — darker, blurred backdrop and solid popup */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.6);      /* darker overlay so table doesn’t show through */
-  backdrop-filter: blur(3px);       /* soft blur behind */
-  display: grid;
-  place-items: center;
-  z-index: 9999;                    /* above sticky headers */
-  padding: 20px;
 }
 
-/* Popup container — ensure solid background */
-.modal-body {
-  width: 100%;
-  max-width: 640px;
-  background: var(--card, #111);    /* fallback solid surface (dark theme) */
-  border: 1px solid var(--border, rgba(255,255,255,.12));
-  border-radius: var(--radius);
-  box-shadow: 0 20px 60px rgba(0,0,0,.5);
-  padding: 0;
+/* ===== Card Header (title + actions) ===== */
+.section-header{
+  display:flex; align-items:baseline; justify-content:space-between; margin-bottom:var(--space-4);
+}
+.section-header h3{
+  margin:0; font-size:var(--fs-h2); font-weight:900; letter-spacing:.2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.section-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+/* ===== Messages ===== */
+.loading{ color:var(--muted); padding:12px; text-align:center; }
+.error-msg{
+  color:#7f1d1d; padding:12px; border-radius:12px;
+  border:1px solid color-mix(in oklab, #ef4444 40%, var(--border));
+  background: linear-gradient(180deg, rgba(239,68,68,.16), rgba(239,68,68,.06));
 }
 
-/* Header inside modal */
-.modal-header {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 14px var(--space-5);
-  border-bottom: 1px solid var(--border, rgba(255,255,255,.12));
-  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+/* ===== Inputs ===== */
+.form-input{
+  width:100%; padding:10px 12px; border-radius:12px;
+  border:1px solid var(--border); background:var(--card); color:var(--text);
+  outline:none; transition:border-color .15s, box-shadow .15s, transform .06s, background .2s;
+  box-shadow: inset 0 2px 8px rgba(2,6,23,.08);
 }
-.modal-header h3 { margin: 0; }
+.form-input:hover{ transform:translateY(-1px); }
+.form-input:focus{
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 5px color-mix(in oklab, var(--accent-500) 40%, transparent);
+}
 
-/* Solid inner surface so inputs never look transparent */
-.modal-content {
-  background: var(--surface, #1a1a1a);
-  border-radius: 0 0 var(--radius) var(--radius);
+/* ===== Buttons ===== */
+.btn, .btn-outline, .btn-ghost, .btn-danger-ghost, .btn--primary, .btn--danger{
+  appearance:none; cursor:pointer; border-radius:12px; font-weight:800; letter-spacing:.2px;
+  padding:10px 14px; border:1px solid var(--border); background:var(--surface); color:var(--text);
+  transition: transform .08s, box-shadow .22s, border-color .2s, background .2s;
+  box-shadow:0 2px 8px rgba(2,6,23,.06);
+}
+.btn:hover, .btn-outline:hover, .btn-ghost:hover, .btn-danger-ghost:hover, .btn--primary:hover, .btn--danger:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(2,6,23,.12);
+}
+
+/* Primary CTA */
+.btn.btn--primary, .btn.btn--primary:not(.btn-outline){
+  background: linear-gradient(120deg, var(--accent-600), var(--accent2-500));
+  color:#fff; border-color: transparent;
+  box-shadow: 0 10px 28px color-mix(in oklab, var(--accent-500) 26%, transparent), inset 0 0 0 1px rgba(255,255,255,.18);
+}
+
+/* Outline / Ghost */
+.btn-outline{
+  background:transparent; position:relative;
+}
+.btn-outline:hover{ border-color: var(--accent-400); box-shadow:0 0 0 4px color-mix(in oklab, var(--accent-500) 28%, transparent); }
+.btn-ghost{
+  background:transparent; border:1px dashed var(--border);
+}
+.btn-danger-ghost{
+  background:transparent; border:1px solid color-mix(in oklab, #ef4444 48%, var(--border));
+  color:#ef4444;
+}
+.btn-danger-ghost:hover{
+  box-shadow:0 10px 24px color-mix(in oklab, #ef4444 28%, transparent);
+}
+
+/* Danger solid */
+.btn--danger{
+  background: linear-gradient(120deg, #ef4444, #dc2626);
+  color:#fff; border-color: transparent;
+  box-shadow: 0 12px 30px color-mix(in oklab, #ef4444 28%, transparent);
+}
+
+/* ===== Table wrapper + table ===== */
+.table-wrap{
+  width:100%; overflow:auto; border-radius:var(--radius);
+  border:1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.62));
+  box-shadow: 0 6px 16px rgba(2,6,23,.06) inset;
+}
+html[data-theme="dark"] .table-wrap{
+  background: linear-gradient(180deg, rgba(18,26,43,.92), rgba(18,26,43,.78));
+}
+
+.table{ width:100%; border-collapse:separate; border-spacing:0; }
+.table thead th{
+  position:sticky; top:0; z-index:1;
+  text-align:left; padding:12px;
+  font-weight:900; font-size:13px; letter-spacing:.3px; text-transform:uppercase;
+  color:var(--muted); border-bottom:1px solid var(--border);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--accent-100) 70%, #fff 30%), transparent);
+}
+.table tbody td{ padding:12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.table tbody tr:last-child td{ border-bottom:none; }
+
+/* Row hover + subtle low-qty cue (if you later add a class) */
+.table tbody tr:hover{
+  background: color-mix(in oklab, var(--accent-50, #f0f9ff) 70%, #fff 30%);
+}
+.table tbody tr.low-qty td{
+  background: color-mix(in oklab, #fee2e2 38%, transparent);
+}
+
+/* empty state */
+.empty{ text-align:center; color:var(--muted); padding:18px; }
+
+/* Row actions container */
+.row-actions{ display:flex; gap:8px; align-items:center; }
+
+/* ===== MODALS: blurred backdrop + colorful shell ===== */
+.modal-backdrop{
+  position:fixed; inset:0; padding:20px; z-index:9999;
+  display:grid; place-items:center;
+  background: color-mix(in oklab, var(--accent-500) 10%, rgba(0,0,0,.60));
+  backdrop-filter: blur(4px) saturate(120%);
+}
+
+/* Popup body with gradient border */
+.modal-body.card{
+  width:100%; max-width:720px; padding:0; overflow:hidden; border-radius:var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02)) padding-box,
+    linear-gradient(120deg, var(--accent-500), var(--accent2-500)) border-box;
+  border:1px solid transparent;
+  box-shadow: 0 22px 60px rgba(0,0,0,.45);
+}
+
+/* Header */
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:14px var(--space-5);
+  border-bottom:1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent-50) 60%, #fff 40%), transparent);
+}
+.modal-header h3{
+  margin:0; font-weight:900;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.btn-close{
+  appearance:none; border:1px solid var(--border); border-radius:10px;
+  background: var(--surface); color: var(--text); padding:6px 10px; cursor:pointer;
+  transition: transform .08s, box-shadow .2s;
+}
+.btn-close:hover{ transform:translateY(-1px); box-shadow:0 10px 24px rgba(2,6,23,.12); }
+
+/* Content surface (solid so fields never see-through) */
+.modal-content{
+  background: var(--surface); border-radius:0 0 var(--radius) var(--radius);
   padding: var(--space-5);
 }
 
-.btn-close {
-  appearance: none;
-  border: 1px solid var(--border, rgba(255,255,255,.12));
-  border-radius: 10px;
-  background: var(--surface, #1a1a1a);
-  color: var(--text, #fff);
-  padding: 6px 10px;
-  cursor: pointer;
+/* ===== Form inside modal ===== */
+.form-grid{ display:grid; gap: var(--space-4); }
+.form-row{ display:grid; gap:6px; }
+.form-row.two-col{
+  display:grid; grid-template-columns:1fr 1fr; gap: var(--space-4);
 }
-.btn-close:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+@media (max-width:768px){ .form-row.two-col{ grid-template-columns:1fr; } }
 
-/* Form inside modal */
-.form-grid { display: grid; gap: var(--space-4); }
-.form-row { display: grid; gap: 6px; }
-.form-row.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
-@media (max-width: 768px) { .form-row.two-col { grid-template-columns: 1fr; } }
-
-.form-row label { color: var(--muted); font-size: var(--fs-2); font-weight: 600; }
-.req { color: #ffb74d; }
-
-/* Inputs */
-.form-input {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border, rgba(255,255,255,.12));
-  background: var(--card, #111);
-  color: var(--text, #fff);
-  outline: none;
-  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+.form-row label{
+  color:var(--muted); font-size:var(--fs-2); font-weight:800; letter-spacing:.2px;
 }
-.form-input:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring);
-}
+.req{ color:#f59e0b; font-weight:900; }
+
+/* Inputs in modal reuse .form-input focus/hover */
 
 /* Modal actions */
-.modal-actions {
+.modal-actions{
   margin-top: var(--space-3);
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  display:flex; justify-content:flex-end; gap:10px;
 }
 
-/* If your app uses a light theme, these optional overrides can help:
-:root {
-  --card: #fff;
-  --surface: #fff;
-  --text: #111;
-  --border: rgba(0,0,0,.08);
+/* Optional: light theme helpers
+:root{
+  --card:#fff; --surface:#fff; --text:#111; --border:rgba(0,0,0,.08);
 }
 */
-.row-actions .btn-ghost { border: 1px solid var(--border, #e5e7eb); padding: 6px 10px; border-radius: 8px; background: transparent; }
-.row-actions .btn-danger-ghost { border: 1px solid #fca5a5; color: #b91c1c; padding: 6px 10px; border-radius: 8px; background: transparent; }
-.btn--danger { background: #dc2626; color: #fff; }

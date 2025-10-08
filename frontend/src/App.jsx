@@ -25,10 +25,9 @@ import ResetPassword from "./pages/ResetPassword.jsx";
 
 import { useAuth } from './context/AuthContext.jsx';
 
-import './styles/globals.css';
-import './styles/variables.css';
+ import './styles/globals.css';
+ import './styles/variables.css';
 import './styles/page.css';
-//import MailerPage from './Manage Password/Mailer.jsx';
 
 // 👇 PublicHome Component
 function PublicHome() {

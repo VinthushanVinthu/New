@@ -1,16 +1,19 @@
-/* =========
-   Fallbacks for CSS variables (optional)
-   ========= */
-:root {
-  --border: rgba(120,120,120,.25);
-  --surface: #0b1220;
-  --card: #0f1629;
-  --text: #e7eaf3;
-  --muted: #9aa3b2;
-  --primary: #2563eb;
+/* ========= Billing (Colorful Edition) =========
+   Uses --accent-* and --accent2-* from variables.css
+   Works in light/dark + accent swaps
+*/
+
+/* Fallbacks (kept minimal; main tokens come from variables.css) */
+:root{
+  --border: #e6e9f2;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --text: #0b1220;
+  --muted: #5b6476;
+  --primary: var(--accent-500, #3b82f6);
   --primary-ink: #ffffff;
-  --ring: rgba(37, 99, 235, .35);
-  --radius: 12px;
+  --ring: color-mix(in oklab, var(--accent-500) 35%, transparent);
+  --radius: 14px;
 
   --space-3: 12px;
   --space-4: 16px;
@@ -20,241 +23,221 @@
   --fs-2: 12px;
 }
 
-/* Page wrapper */
-.bl-billing-page {
-  display: grid;
-  gap: var(--space-6);
+/* ===== Page wrapper ===== */
+.bl-billing-page{
+  display: grid; gap: var(--space-6);
+  /* subtle page bloom */
+  background:
+    radial-gradient(900px 500px at 110% -10%,
+      color-mix(in oklab, var(--accent-400) 16%, transparent) 0%, transparent 60%),
+    radial-gradient(800px 420px at -10% 0%,
+      color-mix(in oklab, var(--accent2-400) 14%, transparent) 0%, transparent 55%);
+  border-radius: var(--radius);
 }
 
-/* Generic card shell */
-.bl-card {
-  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+/* ===== Cards ===== */
+.bl-card{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.62));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-5);
+  box-shadow: 0 14px 40px rgba(2,6,23,.08);
+  backdrop-filter: saturate(130%) blur(6px);
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.bl-card:hover{ transform: translateY(-2px); box-shadow: 0 22px 60px rgba(2,6,23,.12); }
+
+html[data-theme="dark"] .bl-card{
+  background: linear-gradient(180deg, rgba(18,26,43,.85), rgba(18,26,43,.70));
+  box-shadow: 0 18px 40px rgba(0,0,0,.45);
 }
 
-.bl-billing-card {
-  display: grid;
-  gap: var(--space-5);
-}
+.bl-billing-card{ display: grid; gap: var(--space-5); }
 
-.bl-card-lite {
-  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
+/* light “sub card” */
+.bl-card-lite{
   border: 1px dashed var(--border);
   border-radius: calc(var(--radius) - 4px);
   padding: var(--space-4);
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklab, var(--accent-50, #f0f9ff) 45%, #fff 55%), #fff);
 }
 
-.bl-title {
-  margin: 0;
+/* ===== Titles & Sections ===== */
+.bl-title{
+  margin: 0 0 4px 0; font-weight: 900;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-/* Sections */
-.bl-section-title {
+.bl-section-title{
   margin: 0 0 var(--space-3) 0;
-  font-size: 16px;
-  color: var(--muted);
-  font-weight: 700;
-  letter-spacing: .2px;
+  font-size: 16px; font-weight: 800; letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
-/* Grid helpers */
-.bl-grid-2 {
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: 1fr 1fr;
+.bl-hint{ color: var(--muted); font-size: var(--fs-2); margin-top: 6px; }
+.bl-error{ color: #ef5350; font-size: var(--fs-2); margin-top: 6px; }
+.bl-error-inline{ color: #ef5350; font-size: var(--fs-2); }
+
+/* ===== Layout helpers ===== */
+.bl-grid-2{ display:grid; gap:var(--space-4); grid-template-columns:1fr 1fr; }
+@media (max-width:1024px){ .bl-grid-2{ grid-template-columns:1fr; } }
+
+.bl-row{ display:flex; gap:10px; align-items:center; }
+.bl-actions-inline{ margin-top: 4px; }
+
+/* ===== Inputs / Selects ===== */
+.bl-input,.bl-select,.bl-qty,.bl-discount,.bl-pay-input,.bl-pay-select{
+  width:100%; padding:10px 12px; border-radius:12px;
+  border:1px solid var(--border); background: var(--card); color: var(--text);
+  outline:none; transition: border-color .15s, box-shadow .15s, background .2s;
+  box-shadow: 0 2px 8px rgba(2,6,23,.04) inset;
 }
-@media (max-width: 1024px) {
-  .bl-grid-2 { grid-template-columns: 1fr; }
+.bl-input:focus,.bl-select:focus,.bl-qty:focus,.bl-discount:focus,.bl-pay-input:focus,.bl-pay-select:focus{
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 5px var(--ring);
+}
+.bl-qty{ max-width:110px; }
+.bl-discount{ max-width:180px; }
+.bl-pay-select{ max-width:220px; }
+.bl-pay-input{ max-width:280px; }
+
+.bl-label{ display:block; margin-bottom:6px; color: var(--muted); font-size: var(--fs-2); }
+.bl-readonly{
+  min-height:40px; display:inline-flex; align-items:center; padding:0 12px;
+  border:1px solid var(--border); border-radius:12px; background: var(--card);
 }
 
-.bl-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
+/* ===== Buttons ===== */
+.bl-btn, .bl-btn-outline, .bl-btn-add, .bl-btn-remove, .bl-btn-create{
+  appearance:none; cursor:pointer; border-radius:12px;
+  border:1px solid var(--border); background: var(--surface); color: var(--text);
+  padding:10px 14px; font-weight:600;
+  transition: transform .08s, box-shadow .2s, border-color .2s, background .2s;
+  box-shadow: 0 2px 8px rgba(2,6,23,.06);
+}
+.bl-btn:hover, .bl-btn-outline:hover, .bl-btn-add:hover, .bl-btn-remove:hover, .bl-btn-create:hover{
+  transform: translateY(-1px); box-shadow: 0 12px 28px rgba(2,6,23,.10);
 }
 
-.bl-hint { color: var(--muted); font-size: var(--fs-2); margin-top: 6px; }
-.bl-error { color: #ef5350; font-size: var(--fs-2); margin-top: 6px; }
-.bl-error-inline { color: #ef5350; font-size: var(--fs-2); }
-
-/* Buttons */
-.bl-btn, .bl-btn-outline, .bl-btn-add, .bl-btn-remove, .bl-btn-create {
-  appearance: none;
-  cursor: pointer;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  padding: 8px 14px;
-  transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
-}
-.bl-btn:hover, .bl-btn-outline:hover, .bl-btn-add:hover, .bl-btn-remove:hover, .bl-btn-create:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+/* primary action with gradient */
+.bl-btn-create{
+  color: #fff; border-color: transparent;
+  background: linear-gradient(120deg, var(--accent-600), var(--accent2-500));
+  box-shadow:
+    0 10px 28px color-mix(in oklab, var(--accent-500) 26%, transparent),
+    inset 0 0 0 1px rgba(255,255,255,.18);
+  padding: 12px 18px; letter-spacing:.2px;
 }
 
-.bl-btn-outline { background: transparent; }
-.bl-btn-add {
-  background: #1f2937;
-  border-style: dashed;
-  font-weight: 600;
-}
-.bl-btn-remove {
-  padding: 6px 10px;
+.bl-btn-outline{
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  position: relative;
 }
-.bl-btn-remove:disabled { opacity: .5; cursor: not-allowed; }
-.bl-btn-create {
-  background: var(--primary);
-  color: var(--primary-ink);
-  border-color: transparent;
-  font-weight: 700;
-  padding: 10px 18px;
+.bl-btn-outline:hover{
+  border-color: var(--accent-400);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+.bl-btn-outline::after{
+  content:""; position:absolute; left:10px; right:10px; bottom:8px; height:2px;
+  background: linear-gradient(90deg, var(--accent-500), var(--accent2-500));
+  transform: scaleX(0); transform-origin: left; transition: transform .2s;
+}
+.bl-btn-outline:hover::after{ transform: scaleX(1); }
+
+.bl-btn-add{
+  border-style:dashed; font-weight:700;
+  background: color-mix(in oklab, var(--accent-50, #f0f9ff) 65%, #fff 35%);
 }
 
-/* Inputs / selects */
-.bl-input,
-.bl-select,
-.bl-qty,
-.bl-discount,
-.bl-pay-input,
-.bl-pay-select {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--text);
-  outline: none;
-  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
-}
-.bl-input:focus,
-.bl-select:focus,
-.bl-qty:focus,
-.bl-discount:focus,
-.bl-pay-input:focus,
-.bl-pay-select:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring);
+.bl-btn-remove{
+  padding: 6px 10px; background: transparent; border-radius:10px;
 }
 
-.bl-qty { max-width: 110px; }
-.bl-discount { max-width: 180px; }
-.bl-pay-select { max-width: 220px; }
-.bl-pay-input { max-width: 280px; }
-.bl-readonly {
-  min-height: 40px; display: inline-flex; align-items: center;
-  padding: 0 12px; border: 1px solid var(--border); border-radius: 10px;
-  background: var(--card);
+/* ===== Table ===== */
+.bl-table{
+  width:100%; border-collapse: separate; border-spacing:0; overflow:hidden;
+  border:1px solid var(--border); border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.62));
+  box-shadow: 0 6px 16px rgba(2,6,23,.06) inset;
+}
+.bl-table thead th{
+  text-align:left; padding:12px; font-weight:800; font-size:13px; letter-spacing:.3px; text-transform:uppercase;
+  color: var(--muted); border-bottom:1px solid var(--border);
+  background:
+    linear-gradient(90deg, color-mix(in oklab, var(--accent-100) 70%, #fff 30%), transparent);
+}
+.bl-table tbody td{
+  padding:12px; border-bottom:1px solid var(--border); vertical-align: top;
+}
+.bl-table tbody tr:last-child td{ border-bottom:none; }
+.bl-table tbody tr:hover{
+  background: color-mix(in oklab, var(--accent-50, #f0f9ff) 70%, #fff 30%);
 }
 
-.bl-label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: var(--fs-2);
-}
-
-.bl-field { display: grid; gap: 6px; }
-
-/* Billing table */
-.bl-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
-}
-.bl-table thead th {
-  text-align: left;
-  padding: 12px;
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border);
-  background: rgba(255,255,255,.02);
-}
-.bl-table tbody td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-}
-.bl-table tbody tr:last-child td { border-bottom: none; }
-
-/* Add row spacing */
-.bl-btn-add { margin-top: 10px; }
-
-/* Summary */
-.bl-summary {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
+/* ===== Summary ===== */
+.bl-summary{
+  margin-top: var(--space-4); padding-top: var(--space-4);
   border-top: 1px dashed var(--border);
-  display: grid;
-  gap: 10px;
-  justify-items: end;
-  font-size: 15px;
+  display:grid; gap:10px; justify-items:end; font-size:15px;
 }
-.bl-summary-right { text-align: right; }
-.bl-summary-row { display: inline-flex; align-items: center; gap: 8px; }
+.bl-summary-row{ display:inline-flex; align-items:center; gap:8px; }
 
-/* Payment section */
-.bl-payment { display: grid; gap: var(--space-3); }
-.bl-pay-row {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 12px;
-  align-items: center;
+/* ===== Payment ===== */
+.bl-payment{ display:grid; gap: var(--space-3); }
+.bl-pay-row{
+  display:grid; grid-template-columns: 160px 1fr; gap:12px; align-items:center;
 }
-.bl-pay-label { color: var(--muted); font-size: var(--fs-2); }
+@media (max-width:1024px){
+  .bl-pay-row{ grid-template-columns:1fr; }
+  .bl-pay-label{ align-self:flex-start; }
+}
+.bl-pay-label{ color: var(--muted); font-size: var(--fs-2); }
 
-/* Actions */
-.bl-actions {
-  display: flex;
-  justify-content: flex-end;
+/* ===== Actions ===== */
+.bl-actions{ display:flex; justify-content:flex-end; gap:10px; }
+
+/* ===== Customer blocks ===== */
+.bl-customer-block{ display:grid; gap: var(--space-4); }
+.bl-customer-search{ display:grid; gap:8px; }
+.bl-customer-create{ display:grid; gap:12px; }
+
+.bl-customer-picked{
+  padding:12px; border:1px dashed var(--border); border-radius:12px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklab, var(--accent-50, #f0f9ff) 40%, #fff 60%),
+      transparent 70%);
+}
+.bl-picked-grid{ display:grid; grid-template-columns:1fr auto; gap:12px; align-items:start; }
+.bl-picked-col{ display:grid; gap:6px; }
+.bl-picked-title{
+  font-weight:800; letter-spacing:.2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.bl-picked-line > span{ color: var(--muted); margin-right:8px; }
+.bl-picked-actions{ display:flex; align-items:start; }
+
+/* ===== Tiny responsive polish ===== */
+@media (max-width:1024px){
+  .bl-picked-grid{ grid-template-columns:1fr; }
 }
 
-/* Invoice card */
-.bl-invoice {
-  display: grid;
-  gap: var(--space-4);
+/* ===== Dark mode tweaks ===== */
+html[data-theme="dark"] .bl-card-lite{
+  background: linear-gradient(180deg, rgba(18,26,43,.88), rgba(18,26,43,.70));
 }
-.bl-payment-summary {
-  margin-top: var(--space-3);
-  color: var(--muted);
-  display: flex; flex-wrap: wrap; gap: 6px 12px;
+html[data-theme="dark"] .bl-table{
+  background: linear-gradient(180deg, rgba(18,26,43,.90), rgba(18,26,43,.70));
 }
-
-/* Customer block alignment */
-.bl-customer-block { display: grid; gap: var(--space-4); }
-.bl-customer-search { display: grid; gap: 8px; }
-.bl-customer-create { display: grid; gap: 12px; }
-.bl-actions-inline { margin-top: 4px; }
-
-.bl-customer-picked {
-  padding: 12px;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  background: rgba(255,255,255,.02);
-}
-.bl-picked-grid {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
-  align-items: start;
-}
-.bl-picked-col { display: grid; gap: 6px; }
-.bl-picked-title { font-weight: 700; color: var(--muted); }
-.bl-picked-line > span { color: var(--muted); margin-right: 8px; }
-.bl-picked-actions { display: flex; align-items: start; }
-
-@media (max-width: 1024px) {
-  .bl-pay-row { grid-template-columns: 1fr; }
-  .bl-pay-label { align-self: flex-start; }
-  .bl-picked-grid { grid-template-columns: 1fr; }
+html[data-theme="dark"] .bl-btn-add{
+  background: color-mix(in oklab, var(--accent-500) 10%, #121a2b 90%);
+  border-color: color-mix(in oklab, var(--accent-500) 40%, var(--border));
 }

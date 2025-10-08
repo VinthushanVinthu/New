@@ -1,24 +1,87 @@
+/* ====== Colorful Glass Header ====== */
 .app-header {
   position: sticky; top: 0; z-index: 50;
-  display: flex; align-items: center;
-  padding: 10px 16px;
-  backdrop-filter: saturate(180%) blur(8px);
-  background: linear-gradient(180deg, rgba(17,19,24,.85), rgba(17,19,24,.55));
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px;
+
+  /* glass + color bloom using your accent variables */
+  backdrop-filter: saturate(160%) blur(10px);
+  background:
+    radial-gradient(900px 400px at 100% 0%,
+      color-mix(in oklab, var(--accent-400) 22%, transparent) 0%,
+      transparent 65%),
+    radial-gradient(800px 350px at 0% 0%,
+      color-mix(in oklab, var(--accent2-400) 18%, transparent) 0%,
+      transparent 60%),
+    color-mix(in oklab, var(--card) 80%, var(--bg) 20%);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(2,6,23,.06);
 }
 
-.app-header__left { display: flex; align-items: center; gap: 10px; }
+/* Colorful hairline using gradient border image */
+.app-header::after{
+  content:"";
+  position:absolute; left:0; right:0; bottom:-1px; height:1px;
+  background: linear-gradient(90deg, transparent, var(--accent-500), var(--accent2-500), transparent);
+  opacity:.6;
+}
+
+.app-header__left { display: flex; align-items: center; gap: 12px; }
 .app-header__spacer { flex: 1; }
 .app-header__right { display: flex; align-items: center; gap: 10px; }
 
-.brand { display: inline-flex; align-items: center; gap: 8px; }
-.brand__emoji { font-size: 20px; }
-.brand__name { font-weight: 700; letter-spacing: .3px; }
-
-.user-chip {
-  display: inline-flex; gap: 8px; align-items: baseline;
-  padding: 6px 10px; border: 1px solid var(--border);
-  border-radius: 10px; background: var(--card);
+/* ====== Brand ====== */
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand__emoji { font-size: 20px; transform-origin: 60% 60%; transition: transform .2s ease; }
+.brand__name {
+  font-weight: 800; letter-spacing: .3px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.user-chip__name { font-weight: 600; }
-.user-chip__role { color: var(--muted); font-size: var(--fs-2); }
+.brand:hover .brand__emoji { transform: rotate(-8deg) scale(1.05); }
+
+/* ====== User chip (gradient ring) ====== */
+.user-chip{
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 6px; border-radius: 12px; position: relative;
+  /* gradient ring using background + padding-box trick */
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(120deg, var(--accent-500), var(--accent2-500)) border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 6px 18px rgba(2,6,23,.08);
+}
+.user-chip__name { font-weight: 700; }
+.user-chip__role{
+  font-size: var(--fs-2);
+  color: var(--muted);
+  padding: 4px 8px; border-radius: 999px;
+  background: color-mix(in oklab, var(--accent-100) 60%, #fff 40%);
+  border: 1px solid var(--border);
+}
+html[data-theme="dark"] .user-chip__role{
+  background: color-mix(in oklab, var(--accent-500) 12%, var(--card) 88%);
+  border-color: color-mix(in oklab, var(--border) 70%, transparent);
+}
+
+/* ====== Header buttons (ghost) ====== */
+.app-header .btn.btn--ghost{
+  position: relative;
+  border-color: transparent;
+  background: transparent;
+  font-weight: 600;
+}
+.app-header .btn.btn--ghost::after{
+  content:"";
+  position:absolute; left:8px; right:8px; bottom:6px; height:2px;
+  background: linear-gradient(90deg, var(--accent-500), var(--accent2-500));
+  transform: scaleX(0); transform-origin: left; transition: transform .2s ease;
+  border-radius: 2px;
+}
+.app-header .btn.btn--ghost:hover::after{ transform: scaleX(1); }
+
+/* Small screens */
+@media (max-width: 640px){
+  .brand__name{ display:none; }
+  .app-header{ padding: 10px 12px; }
+}

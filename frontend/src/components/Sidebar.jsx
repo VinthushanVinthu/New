@@ -53,7 +53,7 @@ export default function Sidebar() {
     Owner: [
       { path: '/owner', label: 'Dashboard' },
       { path: '/staff', label: 'Staff' },
-      // { path: '/create-shop', label: 'Create Shop' },
+       { path: '/create-shop', label: 'Create Shop' },
       { path: '/inventory', label: 'Inventory' },
       { path: '/billing', label: 'Billing' },
       { path: '/bills', label: 'Bills' },

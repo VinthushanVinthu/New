@@ -1,94 +1,199 @@
-/* ==== Base (keep your earlier base definitions) ==== */
+/* Owner Dashboard – Colorful Theme
+   Uses CSS variables from your colorful variables.css
+   Works in both light and dark themes + accent swaps.
+*/
+
+/* ==== Base (inherit global fonts/background) ==== */
 * { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #0b132b;
-  color: #e0e1dd;
+.owner-dashboard { padding: 16px; }
+
+.page-title {
+  margin: 0 0 16px 0;
+  font-weight: 800;
+  letter-spacing: .3px;
+  line-height: 1.2;
+  /* Gradient ink for the title */
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-a { color: inherit; text-decoration: none; }
 
-.container { flex: 1; padding: 20px; }
-
+/* ==== Card variants ==== */
 .card {
-  background: #3a506b;
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  margin-bottom: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  box-shadow: var(--shadow);
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 20px 50px rgba(2,6,23,.10); }
+
+/* Add to any card for glassy feel */
+.card--glass {
+  background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.6));
+  backdrop-filter: saturate(1.2) blur(6px);
+}
+html[data-theme="dark"] .card--glass {
+  background: linear-gradient(180deg, rgba(18,26,43,.85), rgba(18,26,43,.60));
 }
 
-.table { width: 100%; border-collapse: collapse; }
-.table th, .table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  text-align: left;
+/* Add to any card for vivid gradient fill */
+.card--vivid {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--accent-500), var(--accent2-500));
+  box-shadow: 0 16px 40px color-mix(in oklab, var(--accent-500) 35%, transparent);
 }
-.table thead th { font-weight: 700; opacity: 0.9; }
 
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-.muted { opacity: 0.7; }
-.danger { color: #ffb3b3; }
-
-/* ==== Owner Dashboard layout ==== */
-.owner-dashboard { padding: 12px; }
-.page-title { margin: 0 0 12px 0; font-weight: 700; letter-spacing: 0.2px; }
-
-/* KPI Grid */
+/* ==== KPI Grid ==== */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(220px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 18px;
 }
-.kpi-card { display: flex; flex-direction: column; gap: 8px; }
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-200) 28%, transparent), transparent 60%),
+    var(--card);
+  box-shadow: var(--shadow);
+}
+
+/* Subtle variety per slot (rainbow row) */
+.kpi-grid .kpi-card:nth-child(1){
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-200) 34%, transparent), transparent 60%),
+    var(--card);
+}
+.kpi-grid .kpi-card:nth-child(2){
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent2-200, #ffd1a8) 34%, transparent), transparent 60%),
+    var(--card);
+}
+.kpi-grid .kpi-card:nth-child(3){
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--info, #6366f1) 22%, transparent), transparent 65%),
+    var(--card);
+}
+.kpi-grid .kpi-card:nth-child(4){
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--success, #16a34a) 22%, transparent), transparent 65%),
+    var(--card);
+}
+
+/* Label + rows */
 .kpi-card__header { display: flex; justify-content: space-between; align-items: center; }
 .kpi-label {
-  font-weight: 700;
-  background: #1c2541;
-  padding: 6px 10px;
+  font-weight: 800; letter-spacing: .2px;
+  background: color-mix(in oklab, var(--accent-100) 65%, #fff 35%);
+  color: var(--text);
+  padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
 }
 .kpi-card__row { display: flex; justify-content: space-between; padding: 6px 0; }
-.kpi-card__big { font-size: 36px; font-weight: 800; text-align: center; line-height: 1.2; }
+.kpi-card__row strong { font-weight: 800; }
 
-.kpi-card--accent {
-  background: linear-gradient(135deg, #3a506b 0%, #274862 100%);
-  border: 1px solid rgba(91,192,190,0.25);
+.kpi-card__big {
+  font-size: 40px; font-weight: 900; text-align: center; line-height: 1.1;
+  color: var(--accent-600);
 }
 
-/* Two-column sections */
+/* Extra-accent KPI (you already use kpi-card--accent on Low Stock) */
+.kpi-card--accent{
+  border: 1px solid color-mix(in oklab, var(--accent-500) 35%, var(--border));
+  background:
+    radial-gradient(600px 300px at 10% 0%, color-mix(in oklab, var(--accent-300) 26%, transparent) 0%, transparent 60%),
+    radial-gradient(600px 300px at 100% 0%, color-mix(in oklab, var(--accent2-300, #f59e0b) 22%, transparent) 0%, transparent 60%),
+    var(--card);
+}
+
+/* ==== Two-column sections ==== */
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
+/* Section header */
 .section-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
-.section-header h3 { margin: 0; }
+.section-header h3 {
+  margin: 0; font-weight: 800; letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
 
-/* Status badges */
+/* ==== Tables ==== */
+.table { width: 100%; border-collapse: collapse; }
+.table thead th {
+  font-weight: 800; font-size: 13px; letter-spacing: .3px; text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 8px;
+}
+.table td { padding: 10px 8px; border-bottom: 1px solid color-mix(in oklab, var(--border) 75%, transparent); }
+.table tbody tr:hover {
+  background: color-mix(in oklab, var(--accent-50, #f0f9ff) 65%, #fff 35%);
+}
+
+/* Monospace + helpers */
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+.muted { color: var(--muted); }
+.danger { color: color-mix(in oklab, #ff3b3b 85%, var(--text)); }
+
+/* ==== Status badges ==== */
 .badge {
-  display: inline-block;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #1c2541;
-  border: 1px solid rgba(255,255,255,0.08);
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: .2px;
+  padding: 6px 10px; border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--accent-100) 60%, #fff 40%);
+  color: var(--text);
 }
-.badge--paid     { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.35); }
-.badge--partial  { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); }
-.badge--unpaid   { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); }
+.badge::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-500);
+}
 
-/* Error */
-.error-card { border: 1px solid rgba(239,68,68,0.6); background: rgba(239,68,68,0.1); }
+/* Map statuses to colors */
+.badge--paid{
+  background: color-mix(in oklab, var(--success) 18%, #fff 82%);
+  border-color: color-mix(in oklab, var(--success) 35%, var(--border));
+}
+.badge--paid::before { background: var(--success); }
 
-/* Responsive */
+.badge--partial{
+  background: color-mix(in oklab, var(--warning) 18%, #fff 82%);
+  border-color: color-mix(in oklab, var(--warning) 35%, var(--border));
+}
+.badge--partial::before { background: var(--warning); }
+
+.badge--unpaid{
+  background: color-mix(in oklab, #ef4444 18%, #fff 82%);
+  border-color: color-mix(in oklab, #ef4444 35%, var(--border));
+}
+.badge--unpaid::before { background: #ef4444; }
+
+/* ==== Error card ==== */
+.error-card {
+  border: 1px solid color-mix(in oklab, #ef4444 60%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in oklab, #ef4444 12%, transparent), transparent 70%),
+    var(--card);
+  color: var(--text);
+}
+
+/* ==== Responsive ==== */
 @media (max-width: 1100px) {
   .kpi-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
   .two-col { grid-template-columns: 1fr; }

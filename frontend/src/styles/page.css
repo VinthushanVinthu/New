@@ -1,16 +1,46 @@
-/* Simple utilities to make pages cohesive */
-.page-header {
-  display: flex; align-items: center; gap: 10px; justify-content: space-between;
+.page-header{
+  display:flex; align-items:center; gap:12px; justify-content:space-between;
+  margin-bottom: var(--space-5);
 }
-.page-header h2 { font-size: var(--fs-h2); margin: 0; }
-.page-actions { display: flex; gap: 8px; }
+.page-header h2{
+  font-size: var(--fs-h2); margin:0; letter-spacing:.2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip:text; color: transparent;
+}
+.page-actions{ display:flex; gap:8px; }
 
-.section { display: grid; gap: var(--space-4); }
-.grid-2 { display: grid; gap: var(--space-5); grid-template-columns: 1fr 1fr; }
-.grid-3 { display: grid; gap: var(--space-5); grid-template-columns: 1fr 1fr 1fr; }
+.section{ display:grid; gap:var(--space-4); }
+.grid-2{ display:grid; gap:var(--space-5); grid-template-columns:1fr 1fr; }
+.grid-3{ display:grid; gap:var(--space-5); grid-template-columns:1fr 1fr 1fr; }
 
-@media (max-width: 1024px) {
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
-  .app-shell { grid-template-columns: 1fr; }
-  .app-shell__sidebar { position: static; height: auto; }
+/* Colorful stats row */
+.stats{
+  display:grid; gap:var(--space-4);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.stat{
+  padding:18px; border-radius:18px; border:1px solid var(--border);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-200) 28%, transparent), transparent 60%),
+    var(--card);
+  box-shadow: var(--shadow);
+}
+.stat h4{ margin:0 0 6px; font-weight:600; font-size:13px; color:var(--muted); }
+.stat .value{ font-size:28px; font-weight:800; letter-spacing:.2px; }
+
+/* Hero for public or welcome sections */
+.hero{
+  padding:28px; border-radius:20px;
+  background:
+    radial-gradient(800px 400px at 15% 10%, color-mix(in oklab, var(--accent-400) 28%, transparent) 0%, transparent 60%),
+    radial-gradient(700px 400px at 100% 0%, color-mix(in oklab, var(--accent2-400) 24%, transparent) 0%, transparent 60%),
+    var(--card);
+  border:1px solid var(--border); box-shadow: var(--shadow);
+}
+
+/* Responsive */
+@media (max-width:1024px){
+  .grid-2,.grid-3,.stats{ grid-template-columns:1fr; }
+  .app-shell{ grid-template-columns:1fr; }
+  .app-shell__sidebar{ position:static; height:auto; }
 }

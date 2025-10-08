@@ -1,24 +1,46 @@
-/* Card width + spacing (matches login/create-shop) */
-.register-card {
+/* Register – Colorful Theme (matches Owner/Manager dashboards)
+   Uses your global CSS variables: --card, --border, --radius, --shadow, --text, --muted,
+   --accent-50/100/200/400/500/600, --accent2-500, --primary, --primary-ink, --ring,
+   --space-4/5, --fs-2, etc.
+*/
+
+/* Card frame (same feel as dashboards) */
+.card.register-card {
   max-width: 640px;
   margin: 0 auto;
   display: grid;
   gap: var(--space-5);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  box-shadow: var(--shadow);
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+}
+.card.register-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 50px rgba(2,6,23,.10);
+}
+
+/* Title with gradient ink (like dashboards) */
+.card.register-card > h2 {
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
 /* Form layout */
-.register-form {
-  display: grid;
-  gap: var(--space-4);
-}
+.register-form { display: grid; gap: var(--space-4); }
 
-/* Two-column row for name + role (reuse pattern) */
+/* Two-column row for name + role */
 .grid-2 {
   display: grid;
   gap: var(--space-4);
   grid-template-columns: 1fr 1fr;
 }
-@media (max-width: 1024px) {
+@media (max-width: 1100px) {
   .grid-2 { grid-template-columns: 1fr; }
 }
 
@@ -27,28 +49,96 @@
 .form-field label {
   color: var(--muted);
   font-size: var(--fs-2);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: .2px;
 }
 
-/* Inputs/selects consistent with app */
+/* Inputs/selects with colorful focus */
 .form-input {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  background: var(--card);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-50, #f0f9ff) 8%, transparent), transparent 70%),
+    var(--card);
   color: var(--text);
   outline: none;
-  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  transition: border-color .18s ease, box-shadow .22s ease, background .22s ease, transform .06s ease;
+}
+.form-input:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px color-mix(in oklab, var(--accent-500) 12%, transparent);
 }
 .form-input:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring);
+  border-color: color-mix(in oklab, var(--accent-500) 40%, var(--border));
+  box-shadow:
+    0 0 0 3px var(--ring),
+    0 16px 40px color-mix(in oklab, var(--accent-500) 18%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-100) 16%, transparent), transparent 70%),
+    var(--card);
+}
+
+/* Select normalization (fix linter: include standard + vendor) */
+select.form-input {
+  appearance: none;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(180deg, transparent, transparent), /* keep bg from .form-input */
+    /* small caret */
+    conic-gradient(from 45deg at 50% 55%, var(--muted) 25%, transparent 0 75%, var(--muted) 0);
+  background-repeat: no-repeat;
+  background-position: right 12px center, 0 0;
+  background-size: 10px 10px, auto;
+  padding-right: 34px; /* space for caret */
 }
 
 /* Error + actions */
-.error-msg { color: #ef5350; }
+.error-msg { color: color-mix(in oklab, #ef4444 85%, var(--text)); }
 .actions { display: flex; justify-content: flex-end; }
+
+/* Buttons (align with dashboards) */
+.btn {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--accent-50, #f0f9ff) 14%, transparent), transparent 70%),
+    var(--card);
+  color: var(--text);
+  padding: 10px 16px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(2,6,23,.15);
+}
+
+.btn--primary {
+  border-color: transparent;
+  color: var(--primary-ink);
+  background: linear-gradient(135deg, var(--accent-500), var(--accent2-500));
+  box-shadow: 0 16px 40px color-mix(in oklab, var(--accent-500) 30%, transparent);
+}
+.btn--primary:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 /* Footer note */
 .register-footer { margin: 0; }
+.register-footer a { text-decoration: underline; }
+
+/* Utility */
+.muted { color: var(--muted); }
+
+/* Optional: card-only page spacing if needed */
+/* .page-wrap { padding: 16px; } */
