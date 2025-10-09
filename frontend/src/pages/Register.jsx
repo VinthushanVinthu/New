@@ -1,6 +1,8 @@
+// src/pages/Register.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { api, setToken } from '../lib/api.js';
+import { api } from '../lib/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import '../styles/register.css';
 
 export default function Register() {
@@ -12,6 +14,7 @@ export default function Register() {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const nav = useNavigate();
+  const auth = useAuth();
 
   async function submit(e) {
     e.preventDefault();
@@ -26,11 +29,20 @@ export default function Register() {
         shop_code: role === 'Owner' ? undefined : shopCode
       };
       const { data } = await api.post('/auth/register', body);
-      setToken(data.token, data.user);
 
-      if (role === 'Owner') nav('/create-shop');
-      else if (role === 'Manager') nav('/manager');
-      else nav('/cashier');
+      // Save to auth so DashboardLayout reacts
+      auth.login({ token: data.token, user: data.user });
+
+      const { role: r, status } = data.user;
+
+      if (r === 'Owner') {
+        // New owner goes to create-shop (no sidebar)
+        nav('/create-shop');
+      } else if (r === 'Manager') {
+        nav('/manager');
+      } else {
+        nav('/cashier');
+      }
     } catch (e) {
       setErr(e?.response?.data?.message || 'Registration failed');
     } finally {
@@ -43,7 +55,6 @@ export default function Register() {
       <h2>Register</h2>
 
       <form onSubmit={submit} className="register-form">
-        {/* Row: Full name + Role (same structure) */}
         <div className="grid-2">
           <div className="form-field">
             <label>Full name</label>
@@ -70,7 +81,6 @@ export default function Register() {
           </div>
         </div>
 
-        {/* Email */}
         <div className="form-field">
           <label>Email</label>
           <input
@@ -84,7 +94,6 @@ export default function Register() {
           />
         </div>
 
-        {/* Password */}
         <div className="form-field">
           <label>Password</label>
           <input
@@ -98,7 +107,6 @@ export default function Register() {
           />
         </div>
 
-        {/* Shop code (only for Manager/Cashier) */}
         {role !== 'Owner' && (
           <div className="form-field">
             <label>Shop Secret Code (6-digits)</label>

@@ -1,6 +1,8 @@
+// src/pages/CreateShop.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getUser } from '../lib/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import '../styles/create-shop.css';
 
 export default function CreateShop() {
@@ -17,9 +19,11 @@ export default function CreateShop() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const nav = useNavigate();
-  const user = getUser();
+  const auth = useAuth();
+  const user = auth.user || getUser();
 
   useEffect(() => {
+    // Only Owners can be here (and typically status === 'new')
     if (!user || user.role !== 'Owner') nav('/');
   }, [user, nav]);
 
@@ -39,6 +43,19 @@ export default function CreateShop() {
       };
       const { data } = await api.post('/shop/create', payload);
       setResult(data);
+
+      // After shop creation, flip status to 'joined' so sidebar appears
+      const existingToken =
+        auth.token || localStorage.getItem('token'); // use your token source
+      const currentUser = auth.user || getUser();
+
+      if (currentUser) {
+        const updatedUser = { ...currentUser, status: 'joined' };
+        auth.login({ token: existingToken, user: updatedUser });
+      }
+
+      // Go to owner dashboard
+      nav('/owner');
     } catch (err) {
       setResult(null);
       setError(err?.response?.data?.message || 'Failed to create shop.');

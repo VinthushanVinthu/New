@@ -9,16 +9,24 @@ import '../styles/layout.css';
 export default function DashboardLayout() {
   const { user } = useAuth();
 
+  // Sidebar renders when:
+  // - user exists, AND
+  //   - role is NOT Owner, OR
+  //   - role IS Owner AND status === 'joined'
+  const showSidebar =
+    !!user && (user.role !== 'Owner' || user?.status === 'joined');
+
   return (
     <>
       <Header />
 
       {user ? (
-        // AUTHENTICATED: use the dashboard shell
         <div className="app-shell">
-          <aside className="app-shell__sidebar">
-            <Sidebar />
-          </aside>
+          {showSidebar && (
+            <aside className="app-shell__sidebar">
+              <Sidebar />
+            </aside>
+          )}
 
           <main className="app-shell__main">
             <div className="app-container">
@@ -27,7 +35,6 @@ export default function DashboardLayout() {
           </main>
         </div>
       ) : (
-        // PUBLIC: no shell — lets Login/Register own their layout (login.css)
         <main className="public-main">
           <Outlet />
         </main>

@@ -21,9 +21,16 @@ export default function Login() {
       const { data } = await api.post('/auth/login', { email, password });
       auth.login({ token: data.token, user: data.user });
 
-      if (data.user.role === 'Owner') nav('/owner');
-      else if (data.user.role === 'Manager') nav('/manager');
-      else nav('/cashier');
+      const { role, status } = data.user;
+
+      if (role === 'Owner') {
+        if (status === 'new') nav('/create-shop');
+        else nav('/owner');
+      } else if (role === 'Manager') {
+        nav('/manager');
+      } else {
+        nav('/cashier');
+      }
     } catch (e) {
       setErr(e?.response?.data?.message || 'Login failed');
     } finally {
