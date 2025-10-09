@@ -6,7 +6,7 @@
 
 /* Page wrapper */
 .auth-page{
-  min-height: 100dvh;
+  min-height: 10dvh;
   display: grid;
   place-items: center;
   padding: var(--space-6);
@@ -26,7 +26,7 @@ html[data-theme="dark"] .auth-page{
 
 /* Card */
 .auth-card{
-  width: min(760px, 100%);
+  width: min(400px, 100%);
   display: grid; gap: var(--space-5);
   padding: var(--space-6);
   border-radius: var(--radius);
