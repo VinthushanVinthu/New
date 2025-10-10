@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api.js";
-import "../styles/customers.css"; // <- styles below
+import "../styles/customers.css";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
@@ -28,6 +30,7 @@ export default function Customers() {
   // Data
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
   // Search/filter (client-side)
   const [q, setQ] = useState("");
@@ -45,6 +48,7 @@ export default function Customers() {
   useEffect(() => {
     (async () => {
       try {
+        setErr("");
         const shopRes = await api.get("/shop/my");
         const s = shopRes.data?.[0] || null;
         setShop(s);
@@ -53,7 +57,9 @@ export default function Customers() {
           await fetchCustomers(s.shop_id);
         }
       } catch (e) {
-        alert(e?.response?.data?.message || "Failed to load shop.");
+        const m = e?.response?.data?.message || "Failed to load shop.";
+        setErr(m);
+        alert(m);
       } finally {
         setLoading(false);
       }
@@ -63,11 +69,13 @@ export default function Customers() {
   async function fetchCustomers(shop_id) {
     try {
       setLoading(true);
-      // Expect backend route: GET /api/customers?shop_id=#
+      setErr("");
       const { data } = await api.get("/customers", { params: { shop_id } });
       setCustomers(Array.isArray(data) ? data : []);
     } catch (e) {
-      alert(e?.response?.data?.message || "Failed to load customers.");
+      const m = e?.response?.data?.message || "Failed to load customers.";
+      setErr(m);
+      alert(m);
     } finally {
       setLoading(false);
     }
@@ -107,16 +115,12 @@ export default function Customers() {
     try {
       setSaving(true);
       if (editing) {
-        // UPDATE
-        // PUT /api/customers/:customer_id  body: { name, phone, email }
         await api.put(`/customers/${editing.customer_id}`, {
           name: form.name || null,
           phone: form.phone,
           email: form.email || null,
         });
       } else {
-        // CREATE
-        // POST /api/customers  body: { shop_id, name, phone, email }
         await api.post("/customers", {
           shop_id: shop.shop_id,
           name: form.name || null,
@@ -129,7 +133,6 @@ export default function Customers() {
       closeModal();
     } catch (e) {
       const msg = e?.response?.data?.message || "Save failed.";
-      // If your create API returns 409 on duplicate phone, display it
       alert(msg);
     } finally {
       setSaving(false);
@@ -142,7 +145,6 @@ export default function Customers() {
 
     try {
       setDeletingId(row.customer_id);
-      // DELETE /api/customers/:customer_id  (optionally pass shop_id as query)
       await api.delete(`/customers/${row.customer_id}`, { params: { shop_id: shop.shop_id } });
       setCustomers((prev) => prev.filter((c) => c.customer_id !== row.customer_id));
     } catch (e) {
@@ -164,6 +166,60 @@ export default function Customers() {
     });
   }, [q, customers]);
 
+  // -------- PDF EXPORT (filtered) --------
+  function exportPdf() {
+    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+    const title = "Customers";
+    const sub = [
+      shop?.shop_name || shop?.name ? `Shop: ${shop.shop_name || shop.name}` : "",
+      shop?.shop_id ? `Shop ID: ${shop.shop_id}` : "",
+      `Generated: ${new Date().toLocaleString()}`
+    ].filter(Boolean).join("   •   ");
+
+    doc.setFontSize(16);
+    doc.text(title, 40, 40);
+    doc.setFontSize(10);
+    doc.text(sub, 40, 58);
+
+    const head = [["#", "Customer ID", "Name", "Phone", "Email", "Created"]];
+    const body = (filtered || []).map((row, idx) => ([
+      String(idx + 1),
+      `#${row.customer_id}`,
+      row.name || "-",
+      row.phone || "-",
+      row.email || "-",
+      formatDateTime(row.created_at)
+    ]));
+
+    autoTable(doc, {
+      head,
+      body,
+      startY: 72,
+      styles: { fontSize: 10, cellPadding: 6, overflow: "linebreak" },
+      headStyles: { fontStyle: "bold" },
+      columnStyles: {
+        0: { cellWidth: 24 },   // #
+        1: { cellWidth: 90 },   // Customer ID
+        2: { cellWidth: 140 },  // Name
+        3: { cellWidth: 110 },  // Phone
+        4: { cellWidth: 150 },  // Email
+        5: { cellWidth: 120 },  // Created
+      },
+      didDrawPage: () => {
+        const page = doc.internal.pageSize;
+        const w = page.width || page.getWidth();
+        const h = page.height || page.getHeight();
+        doc.setFontSize(9);
+        doc.text(`Page ${doc.getNumberOfPages()}`, w - 60, h - 20);
+      }
+    });
+
+    const fileName = `customers_${shop?.shop_id || "shop"}_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(fileName);
+  }
+  // --------------------------------------
+
   return (
     <div className="customers-page">
       <div className="card">
@@ -176,7 +232,21 @@ export default function Customers() {
               placeholder="Search name / phone / email"
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && shop?.shop_id) fetchCustomers(shop.shop_id); }}
             />
+            {shop?.shop_id && (
+              <>
+                <button className="btn-outline" onClick={() => fetchCustomers(shop.shop_id)}>↻ Refresh</button>
+                <button
+                  className="btn-outline"
+                  onClick={exportPdf}
+                  disabled={loading || (filtered?.length ?? 0) === 0}
+                  title="Download table as PDF"
+                >
+                  Download PDF
+                </button>
+              </>
+            )}
             <button className="btn" onClick={openCreate}>+ Add Customer</button>
           </div>
         </div>
@@ -190,7 +260,8 @@ export default function Customers() {
             <table className="table">
               <thead>
                 <tr>
-                  <th style={{ width: "18ch" }}>Customer ID</th>
+                  {/* Running number instead of showing Customer ID */}
+                  <th style={{ width: "8ch" }}>#</th>
                   <th>Name</th>
                   <th style={{ width: "18ch" }}>Phone</th>
                   <th>Email</th>
@@ -204,9 +275,9 @@ export default function Customers() {
                     <td colSpan={6} className="empty">No customers.</td>
                   </tr>
                 ) : (
-                  filtered.map((row) => (
+                  filtered.map((row, idx) => (
                     <tr key={row.customer_id}>
-                      <td>#{row.customer_id}</td>
+                      <td>{idx + 1}</td>
                       <td>{row.name || "-"}</td>
                       <td>{row.phone || "-"}</td>
                       <td>{row.email || "-"}</td>
@@ -229,6 +300,7 @@ export default function Customers() {
             </table>
           </div>
         )}
+        {err && <div className="error-msg" style={{ marginTop: 10 }}>{err}</div>}
       </div>
 
       {/* Create / Edit Modal */}

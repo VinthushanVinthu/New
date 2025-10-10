@@ -1,10 +1,13 @@
 // src/pages/Inventory.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api.js';
-import '../styles/Inventory.css'; // keep your path/name
+import '../styles/Inventory.css';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Inventory() {
   const [shopId, setShopId] = useState('');
+  const [shop, setShop] = useState(null);              // <-- track shop details (name/id)
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -42,7 +45,9 @@ export default function Inventory() {
       setLoading(true);
       setErr('');
       const shops = await api.get('/shop/my');
-      const sid = shops.data[0]?.shop_id;
+      const s = shops.data?.[0];
+      const sid = s?.shop_id;
+      setShop(s || null);
       if (sid) {
         setShopId(sid);
         const { data } = await api.get('/inventory/sarees', { params: { shop_id: sid, q: search || undefined } });
@@ -99,10 +104,8 @@ export default function Inventory() {
         stock_quantity: Number(form.stock_quantity || 0)
       };
       if (editingId) {
-        // UPDATE
         await api.put(`/inventory/sarees/${editingId}`, payload);
       } else {
-        // CREATE
         await api.post('/inventory/sarees', { ...payload, shop_id: shopId });
       }
       setShowForm(false);
@@ -121,14 +124,67 @@ export default function Inventory() {
       setDeleting(true);
       await api.delete(`/inventory/sarees/${confirmDeleteId}`);
       setConfirmDeleteId(null);
-      // Optimistic removal to feel snappier
-      setItems(prev => prev.filter(i => i.id !== confirmDeleteId));
+      setItems(prev => prev.filter(i => i.id !== confirmDeleteId)); // optimistic
     } catch (e) {
       alert(e?.response?.data?.message || 'Failed to delete item.');
     } finally {
       setDeleting(false);
     }
   }
+
+  // ---------- PDF EXPORT ----------
+  function exportPdf() {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+    const title = 'Inventory — Sarees';
+    const sub = [
+      shop?.shop_name ? `Shop: ${shop.shop_name}` : '',
+      shop?.shop_id ? `Shop ID: ${shop.shop_id}` : '',
+      `Generated: ${new Date().toLocaleString()}`
+    ].filter(Boolean).join('   •   ');
+
+    doc.setFontSize(16);
+    doc.text(title, 40, 40);
+    doc.setFontSize(10);
+    doc.text(sub, 40, 58);
+
+    const head = [['Name', 'Type', 'Color', 'Design', 'Price', 'Qty']];
+    const body = (filtered || []).map(i => ([
+      i.name || '-',
+      i.type || '-',
+      i.color || '-',
+      i.design || '-',
+      formatPrice(i.price),
+      String(i.stock_quantity ?? '-'),
+    ]));
+
+    autoTable(doc, {
+      head,
+      body,
+      startY: 72,
+      styles: { fontSize: 10, cellPadding: 6, overflow: 'linebreak' },
+      headStyles: { fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 160 }, // Name
+        1: { cellWidth: 90 },  // Type
+        2: { cellWidth: 70 },  // Color
+        3: { cellWidth: 120 }, // Design
+        4: { cellWidth: 60 },  // Price
+        5: { cellWidth: 50 },  // Qty
+      },
+      didDrawPage: () => {
+        const pageSize = doc.internal.pageSize;
+        const pageHeight = pageSize.height || pageSize.getHeight();
+        const pageWidth = pageSize.width || pageSize.getWidth();
+        doc.setFontSize(9);
+        doc.text(`Page ${doc.getNumberOfPages()}`, pageWidth - 60, pageHeight - 20);
+      }
+    });
+
+    const fileName = `inventory_${shop?.shop_id || 'shop'}_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(fileName);
+  }
+  // -------------------------------
 
   return (
     <div className="inventory-page">
@@ -148,6 +204,14 @@ export default function Inventory() {
             />
             <button className="btn-outline" onClick={load} aria-label="Refresh">↻ Refresh</button>
             <button className="btn btn--primary" onClick={openCreate}>+ Add Saree</button>
+            <button
+              className="btn-outline"
+              onClick={exportPdf}
+              disabled={loading || (filtered?.length ?? 0) === 0}
+              title="Download table as PDF"
+            >
+              Download PDF
+            </button>
           </div>
         </div>
 
@@ -181,7 +245,7 @@ export default function Inventory() {
                       <td>{i.type || '-'}</td>
                       <td>{i.color || '-'}</td>
                       <td>{i.design || '-'}</td>
-                      <td>{Number(i.price).toFixed(2)}</td>
+                      <td>{formatPrice(i.price)}</td>
                       <td>{i.stock_quantity}</td>
                       <td>
                         <div className="row-actions" style={{ display: 'flex', gap: 8 }}>
@@ -371,4 +435,11 @@ export default function Inventory() {
 
     </div>
   );
+}
+
+function formatPrice(v) {
+  if (v == null || v === '') return '-';
+  const num = Number(v);
+  if (Number.isNaN(num)) return String(v);
+  return num.toFixed(2);
 }

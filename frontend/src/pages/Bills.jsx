@@ -3,6 +3,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import "../styles/bills.css";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 /* ================ Helpers ================ */
 function moneyRaw(n) {
@@ -74,9 +76,7 @@ function buildInvoiceHtml({
   <title>Bill #${billId}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --border:#e5e7eb; --text:#111827; --muted:#6b7280; --ink:#111827;
-    }
+    :root{ --border:#e5e7eb; --text:#111827; --muted:#6b7280; --ink:#111827; }
     body{ font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; color:var(--text); margin:0; padding:20px; }
     .wrap{ max-width:800px; margin:0 auto; }
     .head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px; }
@@ -805,6 +805,66 @@ export default function Bills() {
     );
   }, [q, bills]);
 
+  // --------- Export list PDF (filtered) ----------
+  function exportBillsPdf() {
+    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+    const title = "Bills Summary";
+    const sub = [
+      shop?.name ? `Shop: ${shop.name}` : "",
+      shop?.shop_id ? `Shop ID: ${shop.shop_id}` : "",
+      `Generated: ${new Date().toLocaleString()}`
+    ].filter(Boolean).join("   •   ");
+
+    doc.setFontSize(16);
+    doc.text(title, 40, 40);
+    doc.setFontSize(10);
+    doc.text(sub, 40, 58);
+
+    const head = [["#", "Bill #", "Date", "Cashier", "Subtotal", "Discount", "Tax", "Total", "Status"]];
+    const body = (filtered || []).map((row, idx) => ([
+      String(idx + 1),
+      `#${row.bill_id}`,
+      formatDateTime(row.created_at),
+      row.cashier_name || "-",
+      moneyRaw(row.subtotal),
+      moneyRaw(row.discount),
+      moneyRaw(row.tax),
+      moneyRaw(row.total_amount),
+      row.status || "-"
+    ]));
+
+    autoTable(doc, {
+      head,
+      body,
+      startY: 72,
+      styles: { fontSize: 10, cellPadding: 6, overflow: "linebreak" },
+      headStyles: { fontStyle: "bold" },
+      columnStyles: {
+        0: { cellWidth: 24 },   // #
+        1: { cellWidth: 50 },   // Bill #
+        2: { cellWidth: 110 },  // Date
+        3: { cellWidth: 110 },  // Cashier
+        4: { cellWidth: 60 },   // Subtotal
+        5: { cellWidth: 60 },   // Discount
+        6: { cellWidth: 50 },   // Tax
+        7: { cellWidth: 60 },   // Total
+        8: { cellWidth: 70 },   // Status
+      },
+      didDrawPage: () => {
+        const page = doc.internal.pageSize;
+        const w = page.width || page.getWidth();
+        const h = page.height || page.getHeight();
+        doc.setFontSize(9);
+        doc.text(`Page ${doc.getNumberOfPages()}`, w - 60, h - 20);
+      }
+    });
+
+    const file = `bills_${shop?.shop_id || "shop"}_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(file);
+  }
+  // ----------------------------------------------
+
   if (page === "detail" && currentBillId) {
     return (
       <div className="bills-page">
@@ -834,9 +894,19 @@ export default function Bills() {
               onChange={(e) => setQ(e.target.value)}
             />
             {!loading && shop?.shop_id && (
-              <button className="bills-btn" onClick={() => fetchBills(shop.shop_id)}>
-                Refresh
-              </button>
+              <>
+                <button className="bills-btn" onClick={() => fetchBills(shop.shop_id)}>
+                  Refresh
+                </button>
+                <button
+                  className="bills-btn bills-btn--outline"
+                  onClick={exportBillsPdf}
+                  disabled={(filtered?.length ?? 0) === 0}
+                  title="Download list as PDF"
+                >
+                  Download PDF
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -850,7 +920,8 @@ export default function Bills() {
             <table className="bills-table">
               <thead>
                 <tr>
-                  <th style={{ width: "12ch" }}>Bill #</th>
+                  {/* Number column instead of Bill ID */}
+                  <th style={{ width: "8ch" }}>#</th>
                   <th style={{ width: "20ch" }}>Date</th>
                   <th>Cashier</th>
                   <th style={{ width: "14ch" }}>Subtotal</th>
@@ -865,9 +936,9 @@ export default function Bills() {
                 {filtered.length === 0 ? (
                   <tr><td colSpan={9} className="bills-empty">No bills found.</td></tr>
                 ) : (
-                  filtered.map((row) => (
+                  filtered.map((row, idx) => (
                     <tr key={row.bill_id}>
-                      <td>#{row.bill_id}</td>
+                      <td>{idx + 1}</td> {/* running number */}
                       <td>{formatDateTime(row.created_at)}</td>
                       <td>{row.cashier_name || "-"}</td>
                       <td>{money(row.subtotal)}</td>
