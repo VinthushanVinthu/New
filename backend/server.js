@@ -11,6 +11,8 @@ import staffRouter from "./src/routes/staff.js";
 import ownerDashboardRouter from "./src/routes/owner-dashboard.routes.js";
 import managerDashboardRouter from "./src/routes/manager-dashboard.routes.js";
 import cashierDashboardRouter from "./src/routes/cashier-dashboard.routes.js";
+import suppliersRouter from "./src/routes/suppliers.js";
+import purchaseOrdersRouter from "./src/routes/purchaseOrders.js";
 import emailRouter from  "./src/routes/mail.js"
 import { db } from "./src/config/db.js";
 
@@ -36,7 +38,8 @@ app.use("/api/owner", ownerDashboardRouter);
 app.use('/api/manager', managerDashboardRouter)
 app.use('/api/cashier', cashierDashboardRouter)
 app.use("/api/mail", emailRouter);
-
+app.use("/api/inventory", suppliersRouter);
+app.use("/api/inventory", purchaseOrdersRouter);
 
 
 

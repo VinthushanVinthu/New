@@ -7,6 +7,13 @@
   align-items: start;
 }
 
+/* When there is NO sidebar, collapse to a single column and remove the "phantom" left gutter */
+.app-shell--no-sidebar {
+  grid-template-columns: 1fr;
+  /* optional: tighten the horizontal rhythm if you like */
+  /* gap: var(--space-6);  keep the vertical rhythm unchanged */
+}
+
 /* Sidebar/Main rules apply only when inside the shell */
 .app-shell .app-shell__sidebar {
   position: sticky;

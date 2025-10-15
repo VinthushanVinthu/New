@@ -16,12 +16,14 @@ export default function DashboardLayout() {
   const showSidebar =
     !!user && (user.role !== 'Owner' || user?.status === 'joined');
 
+  const shellClass = `app-shell ${showSidebar ? '' : 'app-shell--no-sidebar'}`.trim();
+
   return (
     <>
       <Header />
 
       {user ? (
-        <div className="app-shell">
+        <div className={shellClass}>
           {showSidebar && (
             <aside className="app-shell__sidebar">
               <Sidebar />

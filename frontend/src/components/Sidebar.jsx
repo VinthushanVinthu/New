@@ -54,6 +54,8 @@ export default function Sidebar() {
       { path: '/owner', label: 'Dashboard' },
       { path: '/staff', label: 'Staff' },
      //  { path: '/create-shop', label: 'Create Shop' },
+     { path: '/suppliers', label: 'Suppliers' },
+     { path: '/purchase-orders', label: 'Purchase Orders' },
       { path: '/inventory', label: 'Inventory' },
       { path: '/billing', label: 'Billing' },
       { path: '/bills', label: 'Bills' },

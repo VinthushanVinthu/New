@@ -134,6 +134,91 @@ CREATE TABLE `payments` (
 
 
 
+CREATE TABLE IF NOT EXISTS suppliers (
+supplier_id INT NOT NULL AUTO_INCREMENT,
+shop_id INT NOT NULL,
+name VARCHAR(150) NOT NULL,
+phone VARCHAR(40) DEFAULT NULL,
+email VARCHAR(120) DEFAULT NULL,
+address_line VARCHAR(255) DEFAULT NULL,
+city VARCHAR(100) DEFAULT NULL,
+state VARCHAR(100) DEFAULT NULL,
+postal_code VARCHAR(20) DEFAULT NULL,
+country VARCHAR(100) DEFAULT NULL,
+created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (supplier_id),
+KEY idx_suppliers_shop (shop_id),
+CONSTRAINT suppliers_ibfk_1 FOREIGN KEY (shop_id) REFERENCES shops (shop_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE IF NOT EXISTS purchase_orders (
+po_id INT NOT NULL AUTO_INCREMENT,
+shop_id INT NOT NULL,
+supplier_id INT NOT NULL,
+status ENUM('DRAFT','ORDERED','RECEIVED','CANCELLED') NOT NULL DEFAULT 'DRAFT',
+ordered_at DATETIME DEFAULT NULL,
+received_at DATETIME DEFAULT NULL,
+sub_total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+discount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+tax DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+total_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+notes VARCHAR(255) DEFAULT NULL,
+created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (po_id),
+KEY idx_po_shop (shop_id),
+KEY idx_po_supplier (supplier_id),
+KEY idx_po_status (status),
+CONSTRAINT po_ibfk_shop FOREIGN KEY (shop_id) REFERENCES shops (shop_id),
+CONSTRAINT po_ibfk_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers (supplier_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS purchase_order_items (
+po_item_id INT NOT NULL AUTO_INCREMENT,
+po_id INT NOT NULL,
+saree_id INT NOT NULL,
+qty_ordered INT NOT NULL,
+qty_received INT NOT NULL DEFAULT 0,
+unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+line_total DECIMAL(12,2) GENERATED ALWAYS AS (qty_ordered * unit_cost) STORED,
+PRIMARY KEY (po_item_id),
+KEY idx_poi_po (po_id),
+KEY idx_poi_saree (saree_id),
+CONSTRAINT poi_ibfk_po FOREIGN KEY (po_id) REFERENCES purchase_orders (po_id) ON DELETE CASCADE,
+CONSTRAINT poi_ibfk_saree FOREIGN KEY (saree_id) REFERENCES sarees (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE IF NOT EXISTS stock_movements (
+movement_id INT NOT NULL AUTO_INCREMENT,
+shop_id INT NOT NULL,
+saree_id INT NOT NULL,
+source_type ENUM('PURCHASE','SALE','ADJUSTMENT_IN','ADJUSTMENT_OUT','RETURN_IN','RETURN_OUT') NOT NULL,
+source_id INT DEFAULT NULL, -- po_id for PURCHASE, bill_id for SALE, etc.
+quantity_change INT NOT NULL, -- + for in, - for out
+unit_value DECIMAL(12,2) DEFAULT NULL, -- cost for PURCHASE, sale price for SALE (optional)
+note VARCHAR(255) DEFAULT NULL,
+created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (movement_id),
+KEY idx_sm_shop_saree (shop_id, saree_id),
+KEY idx_sm_source (source_type, source_id),
+CONSTRAINT sm_ibfk_shop FOREIGN KEY (shop_id) REFERENCES shops (shop_id),
+CONSTRAINT sm_ibfk_saree FOREIGN KEY (saree_id) REFERENCES sarees (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+DELIMITER $$
+
+CREATE TRIGGER trg_stock_movements_after_insert
+AFTER INSERT ON stock_movements
+FOR EACH ROW
+BEGIN
+  UPDATE sarees
+  SET stock_quantity = GREATEST(0, stock_quantity + NEW.quantity_change)
+  WHERE id = NEW.saree_id;
+END$$
+
+DELIMITER ;
 
 
 

@@ -15,6 +15,8 @@ import Inventory from './pages/Inventory.jsx';
 import OwnerShopSettings from './pages/OwnerShopSettings.jsx';
 import NotFound from './pages/NotFound.jsx';
 import Bills from './pages/Bills.jsx';
+import Suppliers from './pages/Suppliers.jsx';
+import PurchaseOrders from './pages/PurchaseOrders.jsx';
 
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import RoleRoute from './routes/RoleRoute.jsx';
@@ -71,6 +73,8 @@ export default function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="staff" element={<Staff />} />
           <Route path="bills" element={<Bills />} />
+          <Route path="suppliers" element={<Suppliers />} />
+          <Route path="purchase-orders" element={<PurchaseOrders />} />
 
           {/* Owner */}
           <Route element={<RoleRoute allow={['Owner']} />}>
