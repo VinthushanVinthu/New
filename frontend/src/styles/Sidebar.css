@@ -34,6 +34,66 @@
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
+.sidebar-bell-wrap{
+  position:relative;
+  margin-bottom: var(--space-4);
+}
+.sidebar-bell{
+  appearance:none;
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.55));
+  color:var(--text);
+  font-weight:700;
+  cursor:pointer;
+  transition:transform .08s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+  box-shadow:0 8px 18px rgba(2,6,23,.08);
+}
+.sidebar-bell:hover{
+  transform:translateY(-1px);
+  box-shadow:0 14px 32px rgba(2,6,23,.16);
+  border-color: var(--accent-200);
+}
+.sidebar-bell:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 4px var(--ring), 0 14px 32px rgba(2,6,23,.16);
+}
+.sidebar-bell__icon{
+  font-size:1.35rem;
+  line-height:1;
+}
+.sidebar-bell__label{
+  flex:1;
+  text-align:left;
+}
+.sidebar-bell__badge{
+  min-width:32px;
+  text-align:center;
+  font-weight:800;
+  font-size:.95rem;
+  border-radius:999px;
+  padding:4px 10px;
+  background: color-mix(in oklab, var(--accent-100) 65%, #fff 35%);
+  border:1px solid color-mix(in oklab, var(--accent-200) 55%, var(--border));
+  color:var(--text);
+}
+.sidebar-bell__badge--active{
+  background: linear-gradient(120deg, var(--accent-500), var(--accent2-500));
+  color:#fff;
+  box-shadow:0 6px 18px color-mix(in oklab, var(--accent-500) 28%, transparent);
+}
+.sidebar-bell__badge--error{
+  background: color-mix(in oklab, #fca5a5 65%, #fff 35%);
+  border-color: color-mix(in oklab, #f87171 55%, var(--border));
+  color:#b91c1c;
+}
+
 /* ===== Nav ===== */
 .sidebar__nav{
   display: grid; gap: 8px; margin-bottom: var(--space-5);
@@ -136,4 +196,14 @@ html[data-theme="dark"] .sidebar{
 }
 html[data-theme="dark"] .sidebar-link{
   background: linear-gradient(180deg, rgba(18,26,43,.88), rgba(18,26,43,.70));
+}
+html[data-theme="dark"] .sidebar-bell{
+  background: linear-gradient(180deg, rgba(18,26,43,.88), rgba(18,26,43,.72));
+  border-color: color-mix(in oklab, rgba(17,24,39,.9) 60%, var(--border));
+  box-shadow:0 10px 26px rgba(15,23,42,.35);
+}
+html[data-theme="dark"] .sidebar-bell__badge{
+  background: color-mix(in oklab, var(--accent-200) 35%, rgba(17,24,39,.92) 65%);
+  border-color: color-mix(in oklab, var(--accent-300) 45%, rgba(148,163,184,.4));
+  color:#f8fafc;
 }

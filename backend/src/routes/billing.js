@@ -6,6 +6,58 @@ import { requireAuth } from "../middleware/auth.js";
 const router = Router();
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
+const APPROVAL_REQUIRED_MESSAGE = "Manager approval required before editing this bill.";
+
+async function assertCanManageShop(conn, user, shopId) {
+  if (!Number.isFinite(Number(shopId))) {
+    throw new Error("Invalid shop_id");
+  }
+  const id = Number(shopId);
+  if (user.role === "Owner") {
+    const [[shop]] = await conn.query("SELECT owner_id FROM shops WHERE shop_id = ?", [id]);
+    if (!shop) throw new Error("Shop not found");
+    if (shop.owner_id !== user.id) throw new Error("Forbidden");
+  } else if (user.role === "Manager") {
+    const [rows] = await conn.query(
+      "SELECT 1 FROM user_shops WHERE user_id = ? AND shop_id = ? LIMIT 1",
+      [user.id, id]
+    );
+    if (!rows.length) throw new Error("Forbidden");
+  }
+  return id;
+}
+
+async function findLatestEditRequest(conn, billId, userId) {
+  const [rows] = await conn.query(
+    `SELECT request_id, status, manager_note, requested_at, responded_at, used_at, request_reason
+       FROM bill_edit_requests
+      WHERE bill_id = ? AND requested_by = ?
+      ORDER BY request_id DESC
+      LIMIT 1`,
+    [billId, userId]
+  );
+  return rows[0] || null;
+}
+
+async function ensureCashierEditApproval(conn, billId, userId) {
+  const [rows] = await conn.query(
+    `SELECT request_id
+       FROM bill_edit_requests
+      WHERE bill_id = ? AND requested_by = ?
+        AND status = 'APPROVED'
+        AND used_at IS NULL
+      ORDER BY responded_at DESC, request_id DESC
+      LIMIT 1`,
+    [billId, userId]
+  );
+  const row = rows[0];
+  if (!row) {
+    const err = new Error(APPROVAL_REQUIRED_MESSAGE);
+    err.code = "APPROVAL_REQUIRED";
+    throw err;
+  }
+  return row.request_id;
+}
 /* ---------- CREATE ---------- */
 router.post(
   "/create",
@@ -81,13 +133,37 @@ router.post(
 
       const now = new Date();
       const billPeriod = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+      await conn.query(
+        `INSERT INTO bill_sequences (shop_id, bill_period, last_sequence)
+         VALUES (?, ?, 0)
+         ON DUPLICATE KEY UPDATE last_sequence = last_sequence`,
+        [shop_id, billPeriod]
+      );
       const [[seqRow]] = await conn.query(
-        `SELECT COALESCE(MAX(bill_sequence), 0) AS currentSeq
+        `SELECT last_sequence
+           FROM bill_sequences
+          WHERE shop_id = ? AND bill_period = ?
+          FOR UPDATE`,
+        [shop_id, billPeriod]
+      );
+      let currentSeq = Number(seqRow?.last_sequence || 0);
+      const [[maxRow]] = await conn.query(
+        `SELECT COALESCE(MAX(bill_sequence), 0) AS maxSeq
            FROM bills
           WHERE shop_id = ? AND bill_period = ?`,
         [shop_id, billPeriod]
       );
-      const nextSeq = Number(seqRow?.currentSeq || 0) + 1;
+      const historicalMax = Number(maxRow?.maxSeq || 0);
+      if (historicalMax > currentSeq) {
+        currentSeq = historicalMax;
+      }
+      const nextSeq = currentSeq + 1;
+      await conn.query(
+        `UPDATE bill_sequences
+            SET last_sequence = ?
+          WHERE shop_id = ? AND bill_period = ?`,
+        [nextSeq, shop_id, billPeriod]
+      );
       const billNumber = `${billPeriod}-${String(nextSeq).padStart(4, "0")}`;
 
       const [bill] = await conn.query(
@@ -157,6 +233,70 @@ router.post(
   }
 );
 
+/* ---------- EDIT APPROVAL REQUESTS (list for managers) ---------- */
+router.get(
+  "/edit-requests",
+  requireAuth(["Owner", "Manager"]),
+  async (req, res) => {
+    const { shop_id, status = "PENDING" } = req.query;
+    const conn = await db.getConnection();
+    try {
+      const shopId = await assertCanManageShop(conn, req.user, shop_id);
+      const normalizedStatus = (status || "PENDING").toString().toUpperCase();
+      const allowedStatuses = new Set(["PENDING", "APPROVED", "REJECTED", "USED", "ALL"]);
+      if (!allowedStatuses.has(normalizedStatus)) {
+        throw new Error("Invalid status filter");
+      }
+
+      const statusClause = normalizedStatus === "ALL" ? "" : "AND r.status = ?";
+      const params = normalizedStatus === "ALL" ? [shopId] : [shopId, normalizedStatus];
+
+      const [rows] = await conn.query(
+        `SELECT
+            r.request_id,
+            r.bill_id,
+            r.status,
+            r.requested_at,
+            r.responded_at,
+            r.manager_note,
+            r.approved_by,
+            r.used_at,
+            COALESCE(b.bill_number, CONCAT(b.bill_period, '-', LPAD(b.bill_sequence, 4, '0'))) AS bill_number,
+            b.bill_period,
+            b.bill_sequence,
+            b.subtotal,
+            b.discount,
+            b.tax,
+            b.total_amount,
+            b.status AS bill_status,
+            u.name AS cashier_name,
+            mgr.name AS manager_name,
+            c.name AS customer_name,
+            r.request_reason
+         FROM bill_edit_requests r
+         JOIN bills b ON b.bill_id = r.bill_id
+         JOIN users u ON u.id = r.requested_by
+    LEFT JOIN users mgr ON mgr.id = r.approved_by
+    LEFT JOIN customers c ON c.customer_id = b.customer_id
+        WHERE r.shop_id = ?
+          ${statusClause}
+        ORDER BY r.requested_at DESC`,
+        params
+      );
+
+      res.json(rows);
+    } catch (e) {
+      if (e.message === "Forbidden") {
+        res.status(403).json({ message: e.message });
+      } else {
+        res.status(400).json({ message: e.message });
+      }
+    } finally {
+      conn.release();
+    }
+  }
+);
+
 /* ---------- DETAIL (now includes customer info) ---------- */
 router.get(
   "/:id",
@@ -177,6 +317,9 @@ router.get(
       );
       if (!bills.length) return res.status(404).json({ message: "Bill not found" });
       const bill = bills[0];
+      if (!bill.bill_number && bill.bill_period && bill.bill_sequence != null) {
+        bill.bill_number = `${bill.bill_period}-${String(bill.bill_sequence).padStart(4, "0")}`;
+      }
       if (req.user.role === "Cashier" && bill.user_id !== req.user.id) {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -201,12 +344,35 @@ router.get(
       );
 
       const paid = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
+
+      let editPermission = { canEdit: true, latestRequest: null };
+      if (req.user.role === "Cashier") {
+        const latest = await findLatestEditRequest(conn, billId, req.user.id);
+        const latestRequest = latest
+          ? {
+              requestId: latest.request_id,
+              status: latest.status,
+              managerNote: latest.manager_note,
+              requestedAt: latest.requested_at,
+              respondedAt: latest.responded_at,
+              usedAt: latest.used_at,
+              reason: latest.request_reason,
+            }
+          : null;
+        const canEdit =
+          !!latestRequest &&
+          latestRequest.status === "APPROVED" &&
+          !latestRequest.usedAt;
+        editPermission = { canEdit, latestRequest };
+      }
+
       res.json({
         bill,
         items,
         payments,
         paid: round2(paid),
         due: round2(Number(bill.total_amount) - paid),
+        edit_permission: editPermission,
       });
     } catch (e) {
       res.status(400).json({ message: e.message });
@@ -412,7 +578,11 @@ router.put(
 
       const [[bill]] = await conn.query("SELECT * FROM bills WHERE bill_id = ? FOR UPDATE", [bill_id]);
       if (!bill) throw new Error("Bill not found");
-      if (req.user.role === "Cashier" && bill.user_id !== req.user.id) throw new Error("Forbidden");
+      let approvalRequestId = null;
+      if (req.user.role === "Cashier") {
+        if (bill.user_id !== req.user.id) throw new Error("Forbidden");
+        approvalRequestId = await ensureCashierEditApproval(conn, bill.bill_id, req.user.id);
+      }
 
       const [items] = await conn.query("SELECT quantity, price FROM bill_items WHERE bill_id = ?", [bill_id]);
       const subtotal = items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
@@ -436,11 +606,22 @@ router.put(
         [round2(subtotal), round2(cappedDiscount), tax, total_amount, status, bill_id]
       );
 
+      if (approvalRequestId) {
+        await conn.query(
+          "UPDATE bill_edit_requests SET status = 'USED', used_at = NOW() WHERE request_id = ? AND status = 'APPROVED'",
+          [approvalRequestId]
+        );
+      }
+
       await conn.commit();
       res.json({ bill_id, subtotal: round2(subtotal), discount: round2(cappedDiscount), tax, total_amount, paid: round2(paid), status });
     } catch (e) {
       await conn.rollback();
-      res.status(400).json({ message: e.message });
+      if (e.code === "APPROVAL_REQUIRED") {
+        res.status(403).json({ message: e.message, reason: "APPROVAL_REQUIRED" });
+      } else {
+        res.status(400).json({ message: e.message });
+      }
     } finally {
       conn.release();
     }
@@ -465,7 +646,11 @@ router.put(
 
       const [[bill]] = await conn.query("SELECT * FROM bills WHERE bill_id = ? FOR UPDATE", [bill_id]);
       if (!bill) throw new Error("Bill not found");
-      if (req.user.role === "Cashier" && bill.user_id !== req.user.id) throw new Error("Forbidden");
+      let approvalRequestId = null;
+      if (req.user.role === "Cashier") {
+        if (bill.user_id !== req.user.id) throw new Error("Forbidden");
+        approvalRequestId = await ensureCashierEditApproval(conn, bill.bill_id, req.user.id);
+      }
 
       const [oldItems] = await conn.query("SELECT saree_id, quantity FROM bill_items WHERE bill_id = ?", [bill_id]);
       const oldQty = new Map(oldItems.map(i => [Number(i.saree_id), Number(i.quantity)]));
@@ -543,15 +728,144 @@ router.put(
         [round2(subtotal), round2(cappedDiscount), tax, total_amount, status, bill_id]
       );
 
+      if (approvalRequestId) {
+        await conn.query(
+          "UPDATE bill_edit_requests SET status = 'USED', used_at = NOW() WHERE request_id = ? AND status = 'APPROVED'",
+          [approvalRequestId]
+        );
+      }
+
       await conn.commit();
       res.json({ bill_id, subtotal: round2(subtotal), discount: round2(cappedDiscount), tax, total_amount, paid: round2(paid), status });
     } catch (e) {
       await conn.rollback();
-      res.status(400).json({ message: e.message });
+      if (e.code === "APPROVAL_REQUIRED") {
+        res.status(403).json({ message: e.message, reason: "APPROVAL_REQUIRED" });
+      } else {
+        res.status(400).json({ message: e.message });
+      }
     } finally {
       conn.release();
     }
   }
+);
+
+/* ---------- EDIT APPROVAL REQUESTS ---------- */
+router.post(
+  "/:bill_id/edit-requests",
+  requireAuth(["Cashier"]),
+  async (req, res) => {
+    const { bill_id } = req.params;
+    const reasonRaw = (req.body?.reason ?? "").toString().trim();
+    if (!reasonRaw) {
+      return res.status(400).json({ message: "reason is required" });
+    }
+    const reason = reasonRaw.slice(0, 255);
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [[bill]] = await conn.query(
+        "SELECT bill_id, shop_id, user_id FROM bills WHERE bill_id = ? FOR UPDATE",
+        [bill_id]
+      );
+      if (!bill) throw new Error("Bill not found");
+      if (bill.user_id !== req.user.id) throw new Error("Forbidden");
+
+      const [existingRows] = await conn.query(
+        `SELECT request_id, status
+           FROM bill_edit_requests
+          WHERE bill_id = ? AND requested_by = ?
+            AND status IN ('PENDING','APPROVED')
+          ORDER BY request_id DESC
+          LIMIT 1`,
+        [bill_id, req.user.id]
+      );
+      const existing = existingRows[0] || null;
+      if (existing) {
+        throw Object.assign(new Error(`Existing ${existing.status.toLowerCase()} request already covers this bill.`), {
+          code: "REQUEST_EXISTS",
+          status: existing.status,
+        });
+      }
+
+      await conn.query(
+        "INSERT INTO bill_edit_requests (bill_id, shop_id, requested_by, request_reason) VALUES (?, ?, ?, ?)",
+        [bill.bill_id, bill.shop_id, req.user.id, reason]
+      );
+
+      await conn.commit();
+      res.status(201).json({ message: "Approval request submitted" });
+    } catch (e) {
+      await conn.rollback();
+      if (e.message === "Forbidden") {
+        res.status(403).json({ message: e.message });
+      } else if (e.code === "REQUEST_EXISTS") {
+        res.status(409).json({ message: e.message, status: e.status });
+      } else {
+        res.status(400).json({ message: e.message });
+      }
+    } finally {
+      conn.release();
+    }
+  }
+);
+
+function resolveEditRequest(newStatus) {
+  return async (req, res) => {
+    const { request_id } = req.params;
+    const { note } = req.body || {};
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [[request]] = await conn.query(
+        `SELECT r.*, s.owner_id
+           FROM bill_edit_requests r
+           JOIN shops s ON s.shop_id = r.shop_id
+          WHERE r.request_id = ? FOR UPDATE`,
+        [request_id]
+      );
+      if (!request) throw new Error("Request not found");
+      if (request.status !== "PENDING") throw new Error("Request already processed");
+
+      await assertCanManageShop(conn, req.user, request.shop_id);
+
+      await conn.query(
+        `UPDATE bill_edit_requests
+            SET status = ?, manager_note = ?, approved_by = ?, responded_at = NOW()
+          WHERE request_id = ?`,
+        [
+          newStatus,
+          note ? String(note).slice(0, 255) : null,
+          req.user.id,
+          request_id
+        ]
+      );
+
+      await conn.commit();
+      res.json({ request_id: Number(request_id), status: newStatus });
+    } catch (e) {
+      await conn.rollback();
+      if (e.message === "Forbidden") {
+        res.status(403).json({ message: e.message });
+      } else {
+        res.status(400).json({ message: e.message });
+      }
+    } finally {
+      conn.release();
+    }
+  };
+}
+
+router.post(
+  "/edit-requests/:request_id/approve",
+  requireAuth(["Owner", "Manager"]),
+  resolveEditRequest("APPROVED")
+);
+
+router.post(
+  "/edit-requests/:request_id/reject",
+  requireAuth(["Owner", "Manager"]),
+  resolveEditRequest("REJECTED")
 );
 
 /* ---------- ADD PAYMENT (amount + method + reference) ---------- */

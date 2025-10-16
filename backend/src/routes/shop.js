@@ -90,8 +90,8 @@ router.get("/my", requireAuth(), async (req, res) => {
   }
 });
 
-// Manager convenience: fetch their one shop
-router.get("/my-shop", requireAuth(["Manager"]), async (req, res) => {
+// Manager/Cashier convenience: fetch their primary shop
+router.get("/my-shop", requireAuth(["Manager", "Cashier", "Owner"]), async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT s.*

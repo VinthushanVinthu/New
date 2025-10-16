@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api.js';
 import '../styles/sidebar.css';
@@ -10,6 +10,9 @@ export default function Sidebar() {
   const [shop, setShop] = useState(null);
   const [loadingShop, setLoadingShop] = useState(false);
   const [shopErr, setShopErr] = useState('');
+  const [pendingCount, setPendingCount] = useState(0);
+  const [requestsErr, setRequestsErr] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
@@ -47,6 +50,41 @@ export default function Sidebar() {
     return () => { mounted = false; };
   }, [user, location.pathname]);
 
+  useEffect(() => {
+    if (!user || user.role !== 'Manager' || !shop?.shop_id) {
+      setPendingCount(0);
+      setRequestsErr('');
+      return;
+    }
+
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const { data } = await api.get('/billing/edit-requests', {
+          params: { shop_id: shop.shop_id, status: 'PENDING' }
+        });
+        if (!cancelled) {
+          const count = Array.isArray(data) ? data.length : 0;
+          setPendingCount(count);
+          setRequestsErr('');
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setPendingCount(0);
+          setRequestsErr(e?.response?.data?.message || 'Failed to load edit requests.');
+        }
+      }
+    }
+
+    load();
+    const interval = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [user, shop?.shop_id]);
+
   if (!user) return null;
 
   const menus = {
@@ -64,6 +102,8 @@ export default function Sidebar() {
     Manager: [
       { path: '/manager', label: 'Dashboard', icon: '📊' },
       { path: '/staff', label: 'Staff', icon: '🧑‍🤝‍🧑' },
+      { path: '/suppliers', label: 'Suppliers', icon: '🧾' },
+      { path: '/purchase-orders', label: 'Purchase Orders', icon: '📦' },
       { path: '/inventory', label: 'Inventory', icon: '📦' },
       { path: '/billing', label: 'Billing', icon: '💳' },
       { path: '/bills', label: 'Bills', icon: '📋' },
@@ -77,9 +117,39 @@ export default function Sidebar() {
     ],
   };
 
+  const bellIcon = '\u{1F514}';
+  const hasPendingEdits = pendingCount > 0;
+  const pendingStatusText = requestsErr
+    ? requestsErr
+    : hasPendingEdits
+      ? `${pendingCount} pending approval${pendingCount === 1 ? '' : 's'}`
+      : 'No pending requests';
+  const pendingBadgeValue = requestsErr ? '!' : pendingCount;
+
+  const handleBellClick = () => {
+    setRequestsErr('');
+    navigate('/manager?requests=open');
+  };
+
   return (
     <div className="sidebar">
       <div className="sidebar__title">{user.role} Menu</div>
+
+      {user.role === 'Manager' && (
+        <div className="sidebar-bell-wrap" title={pendingStatusText}>
+          <button
+            type="button"
+            className="sidebar-bell"
+            onClick={handleBellClick}
+          >
+            <span className="sidebar-bell__icon" aria-hidden="true">{bellIcon}</span>
+            <span className="sidebar-bell__label">Edit requests</span>
+            <span className={`sidebar-bell__badge${hasPendingEdits ? ' sidebar-bell__badge--active' : ''}${requestsErr ? ' sidebar-bell__badge--error' : ''}`}>
+              {pendingBadgeValue}
+            </span>
+          </button>
+        </div>
+      )}
 
       <ul className="sidebar__nav">
         {menus[user.role]?.map(item => (

@@ -89,9 +89,9 @@ CREATE TABLE `bills` (
   `shop_id` int NOT NULL,
   `customer_id` int DEFAULT NULL,
   `user_id` int NOT NULL,
-  `bill_period` char(6) DEFAULT NULL,
-  `bill_sequence` int DEFAULT NULL,
-  `bill_number` varchar(24) DEFAULT NULL,
+  `bill_period` char(6) NOT NULL,
+  `bill_sequence` int NOT NULL,
+  `bill_number` varchar(24) NOT NULL,
   `subtotal` decimal(10,2) DEFAULT '0.00',
   `discount` decimal(10,2) DEFAULT '0.00',
   `tax` decimal(10,2) DEFAULT '0.00',
@@ -99,6 +99,8 @@ CREATE TABLE `bills` (
   `status` enum('PAID','PARTIAL','UNPAID') DEFAULT 'UNPAID',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`bill_id`),
+  UNIQUE KEY `uniq_bills_sequence` (`shop_id`,`bill_period`,`bill_sequence`),
+  UNIQUE KEY `uniq_bills_number` (`bill_number`),
   KEY `idx_bills_shop` (`shop_id`),
   KEY `idx_bills_user` (`user_id`),
   KEY `idx_bills_customer` (`customer_id`),
@@ -124,6 +126,38 @@ CREATE TABLE `bill_items` (
   CONSTRAINT `bill_items_ibfk_1` FOREIGN KEY (`bill_id`) REFERENCES `bills` (`bill_id`) ON DELETE CASCADE,
   CONSTRAINT `bill_items_ibfk_2` FOREIGN KEY (`saree_id`) REFERENCES `sarees` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `bill_sequences` (
+  `shop_id` int NOT NULL,
+  `bill_period` char(6) NOT NULL,
+  `last_sequence` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`shop_id`,`bill_period`),
+  CONSTRAINT `bill_sequences_ibfk_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `bill_edit_requests` (
+  `request_id` int NOT NULL AUTO_INCREMENT,
+  `bill_id` int NOT NULL,
+  `shop_id` int NOT NULL,
+  `requested_by` int NOT NULL,
+  `request_reason` varchar(255) DEFAULT NULL,
+  `status` enum('PENDING','APPROVED','REJECTED','USED') NOT NULL DEFAULT 'PENDING',
+  `manager_note` varchar(255) DEFAULT NULL,
+  `requested_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `responded_at` timestamp NULL DEFAULT NULL,
+  `approved_by` int DEFAULT NULL,
+  `used_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`request_id`),
+  KEY `idx_edit_requests_status` (`status`),
+  KEY `idx_edit_requests_shop` (`shop_id`),
+  KEY `idx_edit_requests_bill` (`bill_id`),
+  CONSTRAINT `bill_edit_requests_ibfk_bill` FOREIGN KEY (`bill_id`) REFERENCES `bills` (`bill_id`) ON DELETE CASCADE,
+  CONSTRAINT `bill_edit_requests_ibfk_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`),
+  CONSTRAINT `bill_edit_requests_ibfk_requestor` FOREIGN KEY (`requested_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `bill_edit_requests_ibfk_manager` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
 CREATE TABLE `payments` (

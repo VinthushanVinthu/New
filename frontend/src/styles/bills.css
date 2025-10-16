@@ -61,6 +61,82 @@
   box-shadow:0 10px 24px color-mix(in oklab, #ef4444 26%, transparent);
 }
 
+.bills-approval-box{
+  margin-bottom:16px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.bills-approval-message{
+  border-radius:12px;
+  padding:12px 14px;
+  font-weight:600;
+  line-height:1.5;
+  border:1px solid transparent;
+}
+.bills-approval-message--info{
+  background: color-mix(in oklab, var(--accent-50, #f0f9ff) 65%, #fff 35%);
+  border-color: color-mix(in oklab, var(--accent-200) 45%, var(--border));
+  color: color-mix(in oklab, var(--accent-700, #0f172a) 60%, var(--text));
+}
+.bills-approval-message--success{
+  background: color-mix(in oklab, #dcfce7 70%, #fff 30%);
+  border-color: color-mix(in oklab, #22c55e 45%, var(--border));
+  color: color-mix(in oklab, #15803d 70%, var(--text));
+}
+.bills-approval-message--error{
+  background: color-mix(in oklab, #fee2e2 70%, #fff 30%);
+  border-color: color-mix(in oklab, #ef4444 55%, var(--border));
+  color: color-mix(in oklab, #b91c1c 80%, var(--text));
+}
+
+.bills-btn--disabled{
+  cursor:not-allowed;
+  opacity:.6;
+}
+.bills-btn--disabled:hover{
+  transform:none;
+  box-shadow:0 2px 8px rgba(2,6,23,.08);
+}
+.bills-approval-hint--error{
+  color:#b91c1c;
+}
+.bills-approval-form{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.bills-approval-label{
+  font-weight:700;
+  letter-spacing:.2px;
+}
+.bills-textarea{
+  width:100%;
+  border-radius:12px;
+  border:1px solid var(--border);
+  padding:10px 12px;
+  resize:vertical;
+  min-height:90px;
+  font-family:inherit;
+  background:var(--card);
+  color:var(--text);
+  transition:border-color .2s, box-shadow .2s;
+}
+.bills-textarea:focus-visible{
+  outline:none;
+  border-color: var(--accent-400);
+  box-shadow:0 0 0 4px var(--ring);
+}
+.bills-textarea:disabled{
+  opacity:.7;
+  cursor:not-allowed;
+  background: color-mix(in oklab, var(--card) 85%, rgba(148,163,184,.2));
+}
+.bills-approval-hint{
+  font-size: var(--fs-2);
+  color: var(--muted);
+}
+
 /* ===== Table wrapper ===== */
 .bills-table-wrap{
   width:100%; overflow:auto; border-radius:var(--radius);

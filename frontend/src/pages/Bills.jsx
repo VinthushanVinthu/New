@@ -568,10 +568,13 @@ function BillDetailPage({
   taxPercentDefault,
   onBack,
 }) {
+  const { user } = useAuth();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState("view"); // "view" | "edit"
   const [saving, setSaving] = useState(false);
+  const [requestingApproval, setRequestingApproval] = useState(false);
+  const [requestReason, setRequestReason] = useState("");
 
   async function load() {
     try {
@@ -588,6 +591,15 @@ function BillDetailPage({
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [billId]);
 
+  useEffect(() => {
+    const latest = detail?.edit_permission?.latestRequest;
+    if (latest?.status === "PENDING") {
+      setRequestReason(latest.reason || "");
+    } else if (!latest || latest.status === "APPROVED" || latest.status === "USED" || latest.status === "REJECTED") {
+      setRequestReason("");
+    }
+  }, [detail?.edit_permission?.latestRequest?.status, detail?.edit_permission?.latestRequest?.reason]);
+
   async function saveEdit(payload) {
     if (!detail?.bill) return;
     try {
@@ -600,9 +612,41 @@ function BillDetailPage({
       await load();
       setMode("view");
     } catch (e) {
-      alert(e?.response?.data?.message || "Full update failed.");
+      const reason = e?.response?.data?.reason;
+      const msg = e?.response?.data?.message || "Full update failed.";
+      if (reason === "APPROVAL_REQUIRED") {
+        alert(`${msg}\nRequest manager approval first.`);
+        setMode("view");
+        await load();
+      } else {
+        alert(msg);
+      }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function requestEditApproval() {
+    if (!detail?.bill) return;
+    const trimmedReason = requestReason.trim();
+    if (!trimmedReason) {
+      alert("Please explain why this bill needs editing before requesting approval.");
+      return;
+    }
+    try {
+      setRequestingApproval(true);
+      await api.post(`/billing/${detail.bill.bill_id}/edit-requests`, { reason: trimmedReason });
+      alert("Approval request sent to your manager.");
+      await load();
+    } catch (e) {
+      const status = e?.response?.status;
+      const msg = e?.response?.data?.message || "Failed to request approval.";
+      alert(msg);
+      if (status === 409) {
+        await load();
+      }
+    } finally {
+      setRequestingApproval(false);
     }
   }
 
@@ -699,6 +743,58 @@ function BillDetailPage({
   const bill = detail.bill;
   const taxPercent = Number(bill.tax_percentage ?? taxPercentDefault) || 0;
   const billRef = bill.bill_number || `#${bill.bill_id}`;
+  const editPermission = detail?.edit_permission || { canEdit: true, latestRequest: null };
+  const latestRequest = editPermission.latestRequest;
+  const approvalStatus = latestRequest?.status || null;
+  const isCashier = user?.role === "Cashier";
+  const waitingForApproval = isCashier && approvalStatus === "PENDING";
+  const requestButtonLabel = requestingApproval
+    ? "Requesting..."
+    : waitingForApproval
+      ? "Waiting for Approval..."
+      : "Request Edit Approval";
+  const canSubmitReason = requestReason.trim().length > 0;
+  const requestDisabled = requestingApproval || waitingForApproval || !canSubmitReason;
+
+  let approvalMessage = "";
+  let approvalTone = "info";
+  if (isCashier) {
+    switch (approvalStatus) {
+      case "PENDING":
+        approvalMessage = `Waiting for manager approval since ${formatDateTime(latestRequest?.requestedAt)}.`;
+        if (latestRequest?.reason) {
+          approvalMessage += ` Reason submitted: ${latestRequest.reason}`;
+        }
+        approvalTone = "info";
+        break;
+      case "APPROVED":
+        approvalMessage = `Manager approved on ${formatDateTime(latestRequest?.respondedAt || latestRequest?.requestedAt)}.`;
+        if (latestRequest?.managerNote) {
+          approvalMessage += ` Note: ${latestRequest.managerNote}`;
+        }
+        approvalMessage += " You can edit this bill now.";
+        approvalTone = "success";
+        break;
+      case "REJECTED":
+        approvalMessage = "Manager rejected the last edit request.";
+        if (latestRequest?.managerNote) {
+          approvalMessage += ` Note: ${latestRequest.managerNote}`;
+        }
+        if (latestRequest?.reason) {
+          approvalMessage += ` You submitted: ${latestRequest.reason}`;
+        }
+        approvalMessage += " You can send a new request after reviewing the feedback.";
+        approvalTone = "error";
+        break;
+      case "USED":
+        approvalMessage = "Previous approval has already been used. Submit a new request if more changes are needed.";
+        approvalTone = "info";
+        break;
+      default:
+        approvalMessage = "No edit approval has been requested for this bill yet.";
+        approvalTone = "info";
+    }
+  }
 
   return (
     <div className="card">
@@ -710,12 +806,64 @@ function BillDetailPage({
             <button className="bills-btn" onClick={printThisBill}>Print</button>
           )}
           {mode === "view" ? (
-            <button className="bills-btn" onClick={()=>setMode("edit")}>Edit</button>
+            isCashier ? (
+              editPermission.canEdit ? (
+                <button className="bills-btn" onClick={()=>setMode("edit")}>Edit</button>
+              ) : (
+                <button
+                  className={`bills-btn${requestDisabled ? " bills-btn--disabled" : ""}`}
+                  onClick={requestEditApproval}
+                  disabled={requestDisabled}
+                >
+                  {requestButtonLabel}
+                </button>
+              )
+            ) : (
+              <button className="bills-btn" onClick={()=>setMode("edit")}>Edit</button>
+            )
           ) : (
             <button className="bills-btn bills-btn--outline" onClick={()=>setMode("view")} disabled={saving}>Cancel Edit</button>
           )}
         </div>
       </div>
+
+      {isCashier && (
+        <div className="bills-approval-box">
+          {approvalMessage && (
+            <div className={`bills-approval-message bills-approval-message--${approvalTone}`}>
+              {approvalMessage}
+            </div>
+          )}
+          {!editPermission.canEdit && (
+            <div className="bills-approval-form">
+              <label htmlFor="bill-edit-reason" className="bills-approval-label">
+                Why do you need to edit this bill?
+              </label>
+              <textarea
+                id="bill-edit-reason"
+                className="bills-textarea"
+                rows={3}
+                value={requestReason}
+                onChange={(e)=>setRequestReason(e.target.value)}
+                placeholder="Describe what needs to change (wrong quantity, incorrect discount, missing item, etc.)."
+                disabled={waitingForApproval || requestingApproval}
+              />
+              {!waitingForApproval && (
+                <>
+                  <div className="bills-approval-hint">
+                    Managers see this reason before approving your edit.
+                  </div>
+                  {!canSubmitReason && (
+                    <div className="bills-approval-hint bills-approval-hint--error">
+                      Enter a short explanation to enable the approval request button.
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <BillEditor
         mode={mode}

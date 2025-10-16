@@ -116,6 +116,41 @@
 .muted { color: var(--muted); }
 .danger { color: color-mix(in oklab, #ff3b3b 85%, var(--text)); }
 
+.manager-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.manager-btn {
+  appearance: none;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .1s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.manager-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, .12);
+}
+.manager-btn:disabled {
+  opacity: .6;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+.manager-btn--approve {
+  border-color: color-mix(in oklab, var(--success, #16a34a) 55%, var(--border));
+  color: var(--success, #16a34a);
+}
+.manager-btn--reject {
+  border-color: color-mix(in oklab, #ef4444 60%, var(--border));
+  color: #ef4444;
+}
+
 /* ==== Status badges (same mapping/colors as Owner) ==== */
 .badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -196,6 +231,129 @@
 .trend__col:hover .trend__bar { transform: translateY(-3px); }
 .trend__label {
   font-size: 11px; letter-spacing: .2px; color: var(--muted);
+}
+
+.manager-modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.45);
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:60px 20px;
+  z-index:120;
+  backdrop-filter:blur(4px);
+}
+.manager-modal{
+  width:min(720px, 100%);
+  max-height:90vh;
+  overflow:auto;
+  background:var(--card);
+  border-radius:16px;
+  border:1px solid var(--border);
+  box-shadow:0 30px 60px rgba(15,23,42,.25);
+  padding:24px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+.manager-modal__header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.manager-modal__header h3{
+  margin:0;
+  font-size:1.25rem;
+}
+.manager-modal__close{
+  appearance:none;
+  border:none;
+  background:transparent;
+  font-size:1.8rem;
+  line-height:1;
+  cursor:pointer;
+  color:var(--muted);
+}
+.manager-modal__body{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.manager-modal__empty{
+  padding:20px 0;
+  text-align:center;
+  color:var(--muted);
+}
+.manager-modal__empty--error{
+  color:#b91c1c;
+}
+.manager-request-list{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.manager-request-card{
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.80));
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.manager-request-card__top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.manager-request-card__bill{
+  font-weight:800;
+  font-size:1.05rem;
+}
+.manager-request-card__meta{
+  display:flex;
+  gap:6px;
+  font-size:12px;
+  color:var(--muted);
+  flex-wrap:wrap;
+}
+.manager-request-card__time{
+  font-size:12px;
+  color: color-mix(in oklab, var(--muted) 80%, rgba(0,0,0,.5));
+}
+.manager-request-card__reason{
+  font-weight:600;
+  line-height:1.5;
+  color:var(--text);
+}
+.manager-request-card__summary{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  font-size:12px;
+  color:var(--muted);
+}
+.manager-request-card__summary span{
+  white-space:nowrap;
+}
+.manager-request-card__actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+html[data-theme="dark"] .manager-modal{
+  background: linear-gradient(180deg, rgba(17,24,39,.96), rgba(17,24,39,.90));
+  border-color: rgba(148,163,184,.25);
+}
+html[data-theme="dark"] .manager-request-card{
+  background: linear-gradient(180deg, rgba(30,41,59,.92), rgba(15,23,42,.85));
+  border-color: rgba(148,163,184,.25);
 }
 
 /* ==== Responsive (mirror Owner’s breakpoints) ==== */
