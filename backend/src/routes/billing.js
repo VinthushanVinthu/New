@@ -83,22 +83,30 @@ router.post(
       await conn.beginTransaction();
 
       let resolvedCustomerId = customer_id || null;
-      if (!resolvedCustomerId && customer?.phone) {
+      const custName = customer?.name?.trim() || null;
+      const custPhone = customer?.phone?.trim() || null;
+      const custEmail = customer?.email?.trim() || null;
+      const hasCustomerPayload = !!(custName || custPhone || custEmail);
+
+      if (!resolvedCustomerId && custPhone) {
         const [found] = await conn.query(
           "SELECT customer_id FROM customers WHERE shop_id = ? AND phone = ? LIMIT 1",
-          [shop_id, customer.phone]
+          [shop_id, custPhone]
         );
         if (found.length) resolvedCustomerId = found[0].customer_id;
-        else {
+        else if (hasCustomerPayload) {
           const [ins] = await conn.query(
             "INSERT INTO customers (shop_id, name, phone, email) VALUES (?, ?, ?, ?)",
-            [shop_id, customer.name || null, customer.phone, customer.email || null]
+            [shop_id, custName, custPhone, custEmail]
           );
           resolvedCustomerId = ins.insertId;
         }
-      }
-      if (!resolvedCustomerId) {
-        throw new Error("Customer is required. Provide customer_id or customer {phone,...}.");
+      } else if (!resolvedCustomerId && hasCustomerPayload) {
+        const [ins] = await conn.query(
+          "INSERT INTO customers (shop_id, name, phone, email) VALUES (?, ?, ?, ?)",
+          [shop_id, custName, custPhone, custEmail]
+        );
+        resolvedCustomerId = ins.insertId;
       }
 
       const [[shopRow]] = await conn.query(
@@ -164,7 +172,7 @@ router.post(
           WHERE shop_id = ? AND bill_period = ?`,
         [nextSeq, shop_id, billPeriod]
       );
-      const billNumber = `${billPeriod}-${String(nextSeq).padStart(4, "0")}`;
+      const billNumber = `${shop_id}-${billPeriod}-${String(nextSeq).padStart(4, "0")}`;
 
       const [bill] = await conn.query(
         `INSERT INTO bills
@@ -261,7 +269,7 @@ router.get(
             r.manager_note,
             r.approved_by,
             r.used_at,
-            COALESCE(b.bill_number, CONCAT(b.bill_period, '-', LPAD(b.bill_sequence, 4, '0'))) AS bill_number,
+            COALESCE(b.bill_number, CONCAT(b.shop_id, '-', b.bill_period, '-', LPAD(b.bill_sequence, 4, '0'))) AS bill_number,
             b.bill_period,
             b.bill_sequence,
             b.subtotal,
@@ -318,7 +326,7 @@ router.get(
       if (!bills.length) return res.status(404).json({ message: "Bill not found" });
       const bill = bills[0];
       if (!bill.bill_number && bill.bill_period && bill.bill_sequence != null) {
-        bill.bill_number = `${bill.bill_period}-${String(bill.bill_sequence).padStart(4, "0")}`;
+        bill.bill_number = `${bill.shop_id}-${bill.bill_period}-${String(bill.bill_sequence).padStart(4, "0")}`;
       }
       if (req.user.role === "Cashier" && bill.user_id !== req.user.id) {
         return res.status(403).json({ message: "Forbidden" });
