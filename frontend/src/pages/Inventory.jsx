@@ -18,13 +18,15 @@ export default function Inventory() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
+    code: '',
     name: '',
     type: '',
     color: '',
     design: '',
     price: '',
-    stock_quantity: ''
+    discount: ''
   });
+  const [currentStock, setCurrentStock] = useState(0);
 
   // Delete confirm state
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -34,7 +36,7 @@ export default function Inventory() {
     const q = search.trim().toLowerCase();
     if (!q) return items;
     return items.filter(i =>
-      [i.name, i.type, i.color, i.design]
+      [i.item_code, i.name, i.type, i.color, i.design]
         .filter(Boolean)
         .some(v => String(v).toLowerCase().includes(q))
     );
@@ -76,20 +78,23 @@ export default function Inventory() {
 
   function openCreate() {
     setEditingId(null);
-    setForm({ name: '', type: '', color: '', design: '', price: '', stock_quantity: '' });
+    setForm({ code: '', name: '', type: '', color: '', design: '', price: '', discount: '' });
+    setCurrentStock(0);
     setShowForm(true);
   }
 
   function openEdit(item) {
     setEditingId(item.id);
     setForm({
+      code: item.item_code || '',
       name: item.name || '',
       type: item.type || '',
       color: item.color || '',
       design: item.design || '',
       price: item.price != null ? String(item.price) : '',
-      stock_quantity: item.stock_quantity != null ? String(item.stock_quantity) : ''
+      discount: item.discount != null ? String(item.discount) : ''
     });
+    setCurrentStock(item.stock_quantity != null ? Number(item.stock_quantity) : 0);
     setShowForm(true);
   }
 
@@ -99,9 +104,13 @@ export default function Inventory() {
     try {
       setSaving(true);
       const payload = {
-        ...form,
+        name: form.name,
+        item_code: (form.code || '').trim(),
+        type: form.type || '',
+        color: form.color || '',
+        design: form.design || '',
         price: Number(form.price || 0),
-        stock_quantity: Number(form.stock_quantity || 0)
+        discount: Number(form.discount || 0)
       };
       if (editingId) {
         await api.put(`/inventory/sarees/${editingId}`, payload);
@@ -141,20 +150,22 @@ export default function Inventory() {
       shop?.shop_name ? `Shop: ${shop.shop_name}` : '',
       shop?.shop_id ? `Shop ID: ${shop.shop_id}` : '',
       `Generated: ${new Date().toLocaleString()}`
-    ].filter(Boolean).join('   •   ');
+    ].filter(Boolean).join(' | ');
 
     doc.setFontSize(16);
     doc.text(title, 40, 40);
     doc.setFontSize(10);
     doc.text(sub, 40, 58);
 
-    const head = [['Name', 'Type', 'Color', 'Design', 'Price', 'Qty']];
+    const head = [['Code', 'Name', 'Type', 'Color', 'Design', 'Price', 'Discount', 'Qty']];
     const body = (filtered || []).map(i => ([
+      i.item_code || '-',
       i.name || '-',
       i.type || '-',
       i.color || '-',
       i.design || '-',
       formatPrice(i.price),
+      formatPrice(i.discount),
       String(i.stock_quantity ?? '-'),
     ]));
 
@@ -165,12 +176,14 @@ export default function Inventory() {
       styles: { fontSize: 10, cellPadding: 6, overflow: 'linebreak' },
       headStyles: { fontStyle: 'bold' },
       columnStyles: {
-        0: { cellWidth: 160 }, // Name
-        1: { cellWidth: 90 },  // Type
-        2: { cellWidth: 70 },  // Color
-        3: { cellWidth: 120 }, // Design
-        4: { cellWidth: 60 },  // Price
-        5: { cellWidth: 50 },  // Qty
+        0: { cellWidth: 90 },  // Code
+        1: { cellWidth: 160 }, // Name
+        2: { cellWidth: 90 },  // Type
+        3: { cellWidth: 70 },  // Color
+        4: { cellWidth: 120 }, // Design
+        5: { cellWidth: 60 },  // Price
+        6: { cellWidth: 60 },  // Discount
+        7: { cellWidth: 50 },  // Qty
       },
       didDrawPage: () => {
         const pageSize = doc.internal.pageSize;
@@ -224,11 +237,13 @@ export default function Inventory() {
             <table className="table">
               <thead>
                 <tr>
+                  <th style={{ width: '12ch' }}>Code</th>
                   <th>Name</th>
                   <th>Type</th>
                   <th>Color</th>
                   <th>Design</th>
                   <th style={{ width: '12ch' }}>Price</th>
+                  <th style={{ width: '12ch' }}>Discount</th>
                   <th style={{ width: '10ch' }}>Qty</th>
                   <th style={{ width: '12ch' }}>Actions</th>
                 </tr>
@@ -236,16 +251,18 @@ export default function Inventory() {
               <tbody>
                 {(filtered || []).length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="empty">No items found.</td>
+                    <td colSpan={9} className="empty">No items found.</td>
                   </tr>
                 ) : (
                   filtered.map(i => (
                     <tr key={i.id}>
+                      <td className="mono">{i.item_code || '-'}</td>
                       <td>{i.name}</td>
                       <td>{i.type || '-'}</td>
                       <td>{i.color || '-'}</td>
                       <td>{i.design || '-'}</td>
                       <td>{formatPrice(i.price)}</td>
+                      <td>{formatPrice(i.discount)}</td>
                       <td>{i.stock_quantity}</td>
                       <td>
                         <div className="row-actions" style={{ display: 'flex', gap: 8 }}>
@@ -310,6 +327,18 @@ export default function Inventory() {
                 </div>
 
                 <div className="form-row">
+                  <label>Saree Code <span className="req">*</span></label>
+                  <input
+                    className="form-input"
+                    placeholder="Unique code (e.g. SKU123)"
+                    value={form.code}
+                    onChange={e => setForm({ ...form, code: e.target.value })}
+                    required
+                  />
+                  <p className="form-note">Codes must be unique per shop to avoid confusion when names match.</p>
+                </div>
+
+                <div className="form-row">
                   <label>Type <span className="req">*</span></label>
                   <input
                     className="form-input"
@@ -356,18 +385,25 @@ export default function Inventory() {
                     />
                   </div>
                   <div>
-                    <label>Quantity <span className="req">*</span></label>
+                    <label>Discount (₹)</label>
                     <input
                       className="form-input"
-                      placeholder="Enter quantity"
+                      placeholder="Enter discount"
                       type="number"
                       min="0"
-                      step="1"
-                      value={form.stock_quantity}
-                      onChange={e => setForm({ ...form, stock_quantity: e.target.value })}
-                      required
+                      step="0.01"
+                      value={form.discount}
+                      onChange={e => setForm({ ...form, discount: e.target.value })}
                     />
                   </div>
+                </div>
+
+                <div className="form-row">
+                  <label>Current Stock</label>
+                  <div className="form-static">
+                    {Number.isFinite(currentStock) ? currentStock : 0}
+                  </div>
+                  <p className="form-note">Quantity updates when purchase orders are received.</p>
                 </div>
 
                 <div className="modal-actions">

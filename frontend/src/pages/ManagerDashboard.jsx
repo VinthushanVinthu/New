@@ -8,7 +8,7 @@ export default function ManagerDashboard() {
   const [loadingShop, setLoadingShop] = useState(true);
   const [err, setErr] = useState('');
 
-  const [kpis, setKpis] = useState({ todaySales: 0, billsToday: 0, taxesToday: 0, avgBill: 0 });
+  const [kpis, setKpis] = useState({ todaySales: 0, billsToday: 0, taxesToday: 0, avgBill: 0, purchaseToday: 0, purchase30d: 0, salesToday: 0 });
   const [paymentMix, setPaymentMix] = useState({ Cash: 0, Card: 0, UPI: 0, total: 0 });
   const [recentBills, setRecentBills] = useState([]);
   const [pendingBills, setPendingBills] = useState([]);
@@ -49,7 +49,7 @@ export default function ManagerDashboard() {
       setLoadingOverview(true);
       try {
         const { data } = await api.get('/manager/overview', { params: { shop_id: shop.shop_id } });
-        setKpis(data?.kpis || { todaySales: 0, billsToday: 0, taxesToday: 0, avgBill: 0 });
+        setKpis(data?.kpis || { todaySales: 0, billsToday: 0, taxesToday: 0, avgBill: 0, purchaseToday: 0, purchase30d: 0, salesToday: 0 });
         setPaymentMix(data?.paymentMixToday || { Cash: 0, Card: 0, UPI: 0, total: 0 });
         setRecentBills(data?.recentBills || []);
         setPendingBills(data?.pendingBills || []);
@@ -95,6 +95,11 @@ export default function ManagerDashboard() {
         <div className="card kpi__card">
           <h3>Today Sales</h3>
           <h2>{loadingOverview ? '—' : `₹ ${Number(kpis.todaySales || 0).toLocaleString()}`}</h2>
+        </div>
+        <div className="card kpi__card">
+          <h3>Purchases Today</h3>
+          <h2>{loadingOverview ? '—' : `₹ ${Number(kpis.purchaseToday || 0).toLocaleString()}`}</h2>
+          <p className="muted">30d: ₹ {Number(kpis.purchase30d || 0).toLocaleString()}</p>
         </div>
         <div className="card kpi__card">
           <h3>Bills Today</h3>
@@ -179,7 +184,7 @@ export default function ManagerDashboard() {
                 {recentBills.length === 0 && <tr><td colSpan={5} className="muted">No bills</td></tr>}
                 {recentBills.map(b => (
                   <tr key={b.bill_id}>
-                    <td className="mono">#{b.bill_id}</td>
+                    <td className="mono">{b.bill_number || `#${b.bill_id}`}</td>
                     <td>{b.customer_name}</td>
                     <td><span className={`badge badge--${(b.status || 'UNPAID').toLowerCase()}`}>{b.status}</span></td>
                     <td>₹ {Number(b.total_amount).toLocaleString()}</td>
@@ -208,7 +213,7 @@ export default function ManagerDashboard() {
                 {pendingBills.length === 0 && <tr><td colSpan={5} className="muted">All clear 🎉</td></tr>}
                 {pendingBills.map(b => (
                   <tr key={b.bill_id}>
-                    <td className="mono">#{b.bill_id}</td>
+                    <td className="mono">{b.bill_number || `#${b.bill_id}`}</td>
                     <td>{b.customer_name}</td>
                     <td><span className={`badge badge--${(b.status || 'UNPAID').toLowerCase()}`}>{b.status}</span></td>
                     <td>₹ {Number(b.total_amount).toLocaleString()}</td>

@@ -51,30 +51,29 @@ export default function Sidebar() {
 
   const menus = {
     Owner: [
-      { path: '/owner', label: 'Dashboard' },
-      { path: '/staff', label: 'Staff' },
-     //  { path: '/create-shop', label: 'Create Shop' },
-     { path: '/suppliers', label: 'Suppliers' },
-     { path: '/purchase-orders', label: 'Purchase Orders' },
-      { path: '/inventory', label: 'Inventory' },
-      { path: '/billing', label: 'Billing' },
-      { path: '/bills', label: 'Bills' },
-      { path: '/customers', label: 'Customers' },
-      { path: '/owner/settings', label: 'Settings' },
+      { path: '/owner', label: 'Dashboard', icon: '📊' },
+      { path: '/staff', label: 'Staff', icon: '🧑‍🤝‍🧑' },
+      { path: '/suppliers', label: 'Suppliers', icon: '🚚' },
+      { path: '/purchase-orders', label: 'Purchase Orders', icon: '🧾' },
+      { path: '/inventory', label: 'Inventory', icon: '📦' },
+      { path: '/billing', label: 'Billing', icon: '💳' },
+      { path: '/bills', label: 'Bills', icon: '📋' },
+      { path: '/customers', label: 'Customers', icon: '👥' },
+      { path: '/owner/settings', label: 'Settings', icon: '⚙️' },
     ],
     Manager: [
-      { path: '/manager', label: 'Dashboard' },
-      { path: '/staff', label: 'Staff' },
-      { path: '/inventory', label: 'Inventory' },
-      { path: '/billing', label: 'Billing' },
-      { path: '/bills', label: 'Bills' },
-      { path: '/customers', label: 'Customers' },
+      { path: '/manager', label: 'Dashboard', icon: '📊' },
+      { path: '/staff', label: 'Staff', icon: '🧑‍🤝‍🧑' },
+      { path: '/inventory', label: 'Inventory', icon: '📦' },
+      { path: '/billing', label: 'Billing', icon: '💳' },
+      { path: '/bills', label: 'Bills', icon: '📋' },
+      { path: '/customers', label: 'Customers', icon: '👥' },
     ],
     Cashier: [
-      { path: '/cashier', label: 'Dashboard' },
-      { path: '/billing', label: 'Billing' },
-      { path: '/bills', label: 'Bills' },
-      { path: '/customers', label: 'Customers' },
+      { path: '/cashier', label: 'Dashboard', icon: '📊' },
+      { path: '/billing', label: 'Billing', icon: '💳' },
+      { path: '/bills', label: 'Bills', icon: '📋' },
+      { path: '/customers', label: 'Customers', icon: '👥' },
     ],
   };
 
@@ -90,7 +89,8 @@ export default function Sidebar() {
               end
               className={({ isActive }) => (isActive ? 'sidebar-link active' : 'sidebar-link')}
             >
-              {item.label}
+              {item.icon && <span className="sidebar-link__icon" aria-hidden="true">{item.icon}</span>}
+              <span className="sidebar-link__label">{item.label}</span>
             </NavLink>
           </li>
         ))}

@@ -1,0 +1,144 @@
+@import './Inventory.css';
+
+/* Procurement-specific shared styles for Suppliers & Purchase Orders */
+
+/* Let the action header collapse gracefully on smaller screens */
+.inventory-page .section-header{
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ===== Purchase Order full-page form ===== */
+.po-form-page{
+  display: grid;
+  gap: var(--space-6);
+  background:
+    radial-gradient(900px 520px at 110% -10%, color-mix(in oklab, var(--accent-400) 16%, transparent) 0%, transparent 60%),
+    radial-gradient(820px 460px at -10% 0%, color-mix(in oklab, var(--accent2-400) 14%, transparent) 0%, transparent 55%);
+  border-radius: var(--radius);
+}
+
+.po-form-shell{
+  display: grid;
+  gap: var(--space-5);
+}
+
+.po-form-header{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.po-form-header h3{
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: 900;
+  letter-spacing: .2px;
+  background: linear-gradient(90deg, var(--accent-600), var(--accent2-500));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.po-form-subtitle{
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-2);
+}
+.po-status-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  font-size: 12px;
+  background: color-mix(in oklab, var(--accent-100) 65%, #fff 35%);
+  color: var(--accent-700);
+}
+.po-status-chip.status-ordered{
+  background: color-mix(in oklab, var(--accent-200) 65%, #fff 35%);
+  color: var(--accent-800);
+}
+.po-status-chip.status-received{
+  background: color-mix(in oklab, #dcfce7 70%, #fff 30%);
+  color: #166534;
+  border-color: color-mix(in oklab, #22c55e 35%, var(--border));
+}
+.po-status-chip.status-cancelled{
+  background: color-mix(in oklab, #fee2e2 70%, #fff 30%);
+  color: #b91c1c;
+  border-color: color-mix(in oklab, #ef4444 32%, var(--border));
+}
+
+.po-form-grid{
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+@media (max-width: 1024px){
+  .po-form-grid{ grid-template-columns: 1fr; }
+}
+
+.po-form-section{
+  display: grid;
+  gap: var(--space-4);
+}
+.po-form-section h4{
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: var(--text);
+}
+
+.po-summary-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 15px;
+}
+.po-summary-total{
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.po-items-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.po-items-table .table tbody td:first-child{
+  min-width: 220px;
+}
+.po-items-table .table tbody td:nth-child(2),
+.po-items-table .table tbody td:nth-child(3){
+  width: 130px;
+}
+.po-items-table .table tbody td:last-child{
+  white-space: nowrap;
+}
+
+.po-form-actions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+@media (max-width: 768px){
+  .po-form-actions{ justify-content: flex-start; }
+  .po-items-table .table tbody td:first-child{ min-width: 180px; }
+}
+
+.po-form-loading{
+  text-align: center;
+  font-size: 16px;
+  color: var(--muted);
+}

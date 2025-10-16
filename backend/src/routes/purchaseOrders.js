@@ -20,7 +20,7 @@ router.post("/po", requireAuth(["Owner","Manager"]), async (req, res) => {
 /** Add/replace PO items (works for DRAFT only) */
 router.post("/po/:po_id/items", requireAuth(["Owner","Manager"]), async (req, res) => {
   const { po_id } = req.params;
-  const { items } = req.body; // [{saree_id, qty_ordered, unit_cost}]
+  const { items, notes, supplier_id } = req.body; // [{saree_id, qty_ordered, unit_cost}]
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: "items[] required" });
   }
@@ -33,6 +33,24 @@ router.post("/po/:po_id/items", requireAuth(["Owner","Manager"]), async (req, re
     const [[po]] = await conn.query(`SELECT status FROM purchase_orders WHERE po_id = ?`, [po_id]);
     if (!po) throw new Error("PO not found");
     if (po.status !== 'DRAFT') throw new Error("Only DRAFT POs can be edited");
+
+    // optional metadata updates (notes, supplier)
+    const updates = [];
+    const updateVals = [];
+    if (supplier_id !== undefined) {
+      const sid = Number(supplier_id);
+      if (!Number.isFinite(sid) || sid <= 0) throw new Error("supplier_id must be positive");
+      updates.push("supplier_id = ?");
+      updateVals.push(sid);
+    }
+    if (notes !== undefined) {
+      updates.push("notes = ?");
+      updateVals.push(notes || null);
+    }
+    if (updates.length) {
+      updateVals.push(po_id);
+      await conn.query(`UPDATE purchase_orders SET ${updates.join(", ")} WHERE po_id = ?`, updateVals);
+    }
 
     // clear existing items
     await conn.query(`DELETE FROM purchase_order_items WHERE po_id = ?`, [po_id]);
@@ -73,12 +91,54 @@ router.post("/po/:po_id/items", requireAuth(["Owner","Manager"]), async (req, re
 /** Submit PO (DRAFT -> ORDERED) */
 router.post("/po/:po_id/submit", requireAuth(["Owner","Manager"]), async (req, res) => {
   const { po_id } = req.params;
-  const now = new Date();
-  await db.query(
-    `UPDATE purchase_orders SET status='ORDERED', ordered_at = ? WHERE po_id = ? AND status='DRAFT'`,
-    [now, po_id]
-  );
-  res.json({ ok: true });
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[po]] = await conn.query(
+      `SELECT * FROM purchase_orders WHERE po_id = ? FOR UPDATE`,
+      [po_id]
+    );
+    if (!po) throw new Error("PO not found");
+    if (po.status !== 'DRAFT') throw new Error("Only DRAFT POs can be submitted");
+
+    const [items] = await conn.query(
+      `SELECT poi.*, s.shop_id
+       FROM purchase_order_items poi
+       JOIN sarees s ON s.id = poi.saree_id
+       WHERE poi.po_id = ?`,
+      [po_id]
+    );
+
+    if (!items.length) {
+      throw new Error("Cannot submit PO without items");
+    }
+    const hasInvalidQty = items.some((it) => {
+      const ordered = Number(it.qty_ordered);
+      return !Number.isFinite(ordered) || ordered <= 0;
+    });
+    if (hasInvalidQty) {
+      throw new Error("All items must have a positive qty_ordered before submitting");
+    }
+
+    const now = new Date();
+    await conn.query(
+      `UPDATE purchase_orders 
+         SET status='ORDERED',
+             ordered_at = COALESCE(ordered_at, ?),
+             received_at = NULL
+       WHERE po_id = ?`,
+      [now, po_id]
+    );
+
+    await conn.commit();
+    res.json({ ok: true });
+  } catch (e) {
+    await conn.rollback();
+    res.status(400).json({ message: e.message || "Failed to submit PO" });
+  } finally {
+    conn.release();
+  }
 });
 
 /** Receive items (partial allowed). Creates stock movements. */
@@ -188,7 +248,7 @@ router.get("/po/:po_id", requireAuth(), async (req, res) => {
 
 /** List POs (by shop, optional supplier, status, q) */
 router.get("/po", requireAuth(), async (req, res) => {
-  const { shop_id, supplier_id, status, q } = req.query;
+  const { shop_id, supplier_id, status, q, range, start, end } = req.query;
   if (!shop_id) return res.status(400).json({ message: "shop_id required" });
 
   let sql = `
@@ -199,16 +259,74 @@ router.get("/po", requireAuth(), async (req, res) => {
   `;
   const vals = [shop_id];
 
+  const now = new Date();
+  let startBound = null;
+  let endBound = null;
+  if (start || end) {
+    const startDate = start ? new Date(start) : null;
+    const endDate = end ? new Date(end) : null;
+    if ((startDate && Number.isNaN(startDate.getTime())) || (endDate && Number.isNaN(endDate.getTime()))) {
+      return res.status(400).json({ message: "Invalid date filter" });
+    }
+    startBound = startDate ? startDate.toISOString().slice(0, 19).replace("T", " ") : null;
+    endBound = endDate ? endDate.toISOString().slice(0, 19).replace("T", " ") : null;
+  } else {
+    switch ((range || "").toLowerCase()) {
+      case "today": {
+        const startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
+        startBound = startDate.toISOString().slice(0, 19).replace("T", " ");
+        endBound = endDate.toISOString().slice(0, 19).replace("T", " ");
+        break;
+      }
+      case "month": {
+        const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        startBound = startDate.toISOString().slice(0, 19).replace("T", " ");
+        endBound = endDate.toISOString().slice(0, 19).replace("T", " ");
+        break;
+      }
+      case "year": {
+        const startDate = new Date(now.getFullYear(), 0, 1);
+        const endDate = new Date(now.getFullYear() + 1, 0, 1);
+        startBound = startDate.toISOString().slice(0, 19).replace("T", " ");
+        endBound = endDate.toISOString().slice(0, 19).replace("T", " ");
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
   if (supplier_id) { sql += " AND po.supplier_id = ?"; vals.push(supplier_id); }
   if (status) { sql += " AND po.status = ?"; vals.push(status); }
   if (q) {
     sql += " AND (sup.name LIKE ? OR po.notes LIKE ?)";
     vals.push(`%${q}%`, `%${q}%`);
   }
+  if (startBound || endBound) {
+    sql += " AND po.created_at BETWEEN ? AND ?";
+    vals.push(startBound || "1970-01-01 00:00:00", endBound || "2999-12-31 23:59:59");
+  }
   sql += " ORDER BY po.created_at DESC, po.po_id DESC";
 
   const [rows] = await db.query(sql, vals);
-  res.json(rows);
+
+  const summary = rows.reduce(
+    (acc, row) => {
+      acc.count += 1;
+      acc.subtotal += Number(row.sub_total || 0);
+      acc.discount += Number(row.discount || 0);
+      acc.tax += Number(row.tax || 0);
+      acc.total += Number(row.total_amount || 0);
+      return acc;
+    },
+    { count: 0, subtotal: 0, discount: 0, tax: 0, total: 0 }
+  );
+
+  res.json({ purchase_orders: rows, summary, range: range || null, start: startBound, end: endBound });
 });
 
 export default router;

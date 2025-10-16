@@ -1,7 +1,7 @@
 // src/pages/Suppliers.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api.js';
-import '../styles/Inventory.css';
+import '../styles/procurement.css';
 
 export default function Suppliers() {
   const [shop, setShop] = useState(null);

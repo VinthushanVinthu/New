@@ -58,11 +58,14 @@ CREATE TABLE `sarees` (
   `type` varchar(80) DEFAULT NULL,
   `color` varchar(50) DEFAULT NULL,
   `design` varchar(120) DEFAULT NULL,
+  `item_code` varchar(80) DEFAULT NULL,
   `price` decimal(10,2) DEFAULT '0.00',
+  `discount` decimal(10,2) DEFAULT '0.00',
   `stock_quantity` int DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `shop_id` (`shop_id`),
+  UNIQUE KEY `idx_sarees_shop_code` (`shop_id`,`item_code`),
   CONSTRAINT `sarees_ibfk_1` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -86,6 +89,9 @@ CREATE TABLE `bills` (
   `shop_id` int NOT NULL,
   `customer_id` int DEFAULT NULL,
   `user_id` int NOT NULL,
+  `bill_period` char(6) DEFAULT NULL,
+  `bill_sequence` int DEFAULT NULL,
+  `bill_number` varchar(24) DEFAULT NULL,
   `subtotal` decimal(10,2) DEFAULT '0.00',
   `discount` decimal(10,2) DEFAULT '0.00',
   `tax` decimal(10,2) DEFAULT '0.00',
@@ -96,6 +102,7 @@ CREATE TABLE `bills` (
   KEY `idx_bills_shop` (`shop_id`),
   KEY `idx_bills_user` (`user_id`),
   KEY `idx_bills_customer` (`customer_id`),
+  KEY `idx_bills_period` (`shop_id`,`bill_period`,`bill_sequence`),
   KEY `idx_bills_status_created` (`status`,`created_at`),
   CONSTRAINT `bills_ibfk_1` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`),
   CONSTRAINT `bills_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`),

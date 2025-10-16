@@ -17,7 +17,7 @@
 /* ==== KPI Row (4-up like Owner’s kpi-grid) ==== */
 .kpi {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -46,6 +46,11 @@
   font-weight: 900;
   letter-spacing: .2px;
   color: var(--text);
+}
+.kpi__card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 /* Subtle variety per slot (rainbow row, mirrors Owner) */

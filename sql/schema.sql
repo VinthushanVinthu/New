@@ -39,10 +39,13 @@ CREATE TABLE IF NOT EXISTS sarees (
   type VARCHAR(80),
   color VARCHAR(50),
   design VARCHAR(120),
+  item_code VARCHAR(80),
   price DECIMAL(10,2) DEFAULT 0,
+  discount DECIMAL(10,2) DEFAULT 0,
   stock_quantity INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (shop_id) REFERENCES shops(shop_id)
+  FOREIGN KEY (shop_id) REFERENCES shops(shop_id),
+  UNIQUE KEY idx_sarees_shop_code (shop_id, item_code)
 );
 
 CREATE TABLE IF NOT EXISTS customers (
@@ -60,6 +63,9 @@ CREATE TABLE IF NOT EXISTS bills (
   shop_id INT NOT NULL,
   customer_id INT NULL,
   user_id INT NOT NULL,
+  bill_period CHAR(6),
+  bill_sequence INT,
+  bill_number VARCHAR(24),
   subtotal DECIMAL(10,2) DEFAULT 0,
   discount DECIMAL(10,2) DEFAULT 0,
   tax DECIMAL(10,2) DEFAULT 0,
@@ -67,7 +73,8 @@ CREATE TABLE IF NOT EXISTS bills (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (shop_id) REFERENCES shops(shop_id),
   FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  KEY idx_bills_period (shop_id, bill_period, bill_sequence)
 );
 
 CREATE TABLE IF NOT EXISTS bill_items (

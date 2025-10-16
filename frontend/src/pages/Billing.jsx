@@ -30,16 +30,23 @@ function buildInvoiceHtml({
   // Table rows (only lines with an item and qty>0)
   const lineRows = rows
     .filter((r) => r.item && Number(r.qty) > 0)
-    .map(
-      (r) => `
+    .map((r) => {
+      const basePrice = Number(r.item?.price || 0);
+      const itemDiscount = Number(r.item?.discount || 0);
+      const netUnit = Math.max(0, basePrice - itemDiscount);
+      const qty = Number(r.qty);
+      const lineTotal = netUnit * qty;
+      const label = r.item?.item_code ? `${r.item.item_code} — ${r.item.name}` : r.item.name;
+      return `
       <tr>
-        <td>${r.item.name}</td>
-        <td style="text-align:right;">${MONEY(Number(r.item.price))}</td>
-        <td style="text-align:right;">${Number(r.qty)}</td>
-        <td style="text-align:right;">${MONEY(Number(r.item.price) * Number(r.qty))}</td>
+        <td>${label}</td>
+        <td style="text-align:right;">${MONEY(basePrice)}</td>
+        <td style="text-align:right;">${MONEY(itemDiscount)}</td>
+        <td style="text-align:right;">${qty}</td>
+        <td style="text-align:right;">${MONEY(lineTotal)}</td>
       </tr>
-    `
-    )
+    `;
+    })
     .join("");
 
   return `
@@ -103,6 +110,7 @@ function buildInvoiceHtml({
           <tr>
             <th>Item</th>
             <th class="right">Price</th>
+            <th class="right">Discount</th>
             <th class="right">Qty</th>
             <th class="right">Line Total</th>
           </tr>
@@ -369,13 +377,20 @@ export default function Billing() {
   }
 
   // ---------------- Totals ----------------
+  const unitPrice = (item) => {
+    if (!item) return 0;
+    const base = Number(item.price || 0);
+    const off = Number(item.discount || 0);
+    return Math.max(0, base - off);
+  };
+
   const selectedIds = useMemo(
     () => rows.map((r) => (r.item ? Number(r.item.id) : null)).filter((v) => v != null),
     [rows]
   );
 
   const subtotal = useMemo(
-    () => rows.reduce((s, r) => s + (r.item ? Number(r.item.price) * Number(r.qty || 0) : 0), 0),
+    () => rows.reduce((s, r) => s + unitPrice(r.item) * Number(r.qty || 0), 0),
     [rows]
   );
 
@@ -626,56 +641,69 @@ export default function Billing() {
               <th>Item</th>
               <th style={{ width: 110 }}>Qty</th>
               <th style={{ width: 120 }}>Price</th>
+              <th style={{ width: 120 }}>Discount</th>
               <th style={{ width: 140 }}>Line Total</th>
               <th style={{ width: 90 }}>Remove</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td>
-                  <select
-                    value={r.item?.id || ""}
-                    onChange={(e) => handleSelect(r.id, e.target.value)}
-                    className="bl-select"
-                  >
-                    <option value="">-- Select Item --</option>
-                    {sarees
-                      .filter((s) => !selectedIds.includes(Number(s.id)) || s.id === r.item?.id)
-                      .map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} (₹{MONEY(Number(s.price))}, Stock: {s.stock_quantity})
-                        </option>
-                      ))}
-                  </select>
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    min="0"
-                    value={r.qty}
-                    onChange={(e) => handleQty(r.id, e.target.value)}
-                    className="bl-qty"
-                  />
-                  {r.error && <div className="bl-error">{r.error}</div>}
-                </td>
-                <td>{r.item ? `₹ ${MONEY(Number(r.item.price))}` : "-"}</td>
-                <td>{r.item ? `₹ ${MONEY(Number(r.item.price) * Number(r.qty || 0))}` : "-"}</td>
-                <td>
-                  <button
-                    className="bl-btn-remove"
-                    onClick={() => removeRow(r.id)}
-                    disabled={rows.length === 1}
-                    title={rows.length === 1 ? "At least one row required" : "Remove row"}
-                  >
-                    ×
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const price = Number(r.item?.price || 0);
+              const itemDiscount = Number(r.item?.discount || 0);
+              const netUnit = unitPrice(r.item);
+              const lineTotal = netUnit * Number(r.qty || 0);
+              return (
+                <tr key={r.id}>
+                  <td>
+                    <select
+                      value={r.item?.id || ""}
+                      onChange={(e) => handleSelect(r.id, e.target.value)}
+                      className="bl-select"
+                    >
+                      <option value="">-- Select Item --</option>
+                      {sarees
+                        .filter((s) => !selectedIds.includes(Number(s.id)) || s.id === r.item?.id)
+                        .map((s) => {
+                          const label = s.item_code ? `${s.item_code} — ${s.name}` : s.name;
+                          const basePrice = Number(s.price || 0);
+                          const baseDiscount = Number(s.discount || 0);
+                          const baseNet = Math.max(0, basePrice - baseDiscount);
+                          return (
+                            <option key={s.id} value={s.id}>
+                              {label} (Price: ₹{MONEY(basePrice)}, Discount: ₹{MONEY(baseDiscount)}, Net: ₹{MONEY(baseNet)}, Stock: {s.stock_quantity})
+                            </option>
+                          );
+                        })}
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      min="0"
+                      value={r.qty}
+                      onChange={(e) => handleQty(r.id, e.target.value)}
+                      className="bl-qty"
+                    />
+                    {r.error && <div className="bl-error">{r.error}</div>}
+                  </td>
+                  <td>{r.item ? `₹ ${MONEY(price)}` : "₹ 0.00"}</td>
+                  <td>{r.item ? `₹ ${MONEY(itemDiscount)}` : "₹ 0.00"}</td>
+                  <td>{r.item ? `₹ ${MONEY(lineTotal)}` : "₹ 0.00"}</td>
+                  <td>
+                    <button
+                      className="bl-btn-remove"
+                      onClick={() => removeRow(r.id)}
+                      disabled={rows.length === 1}
+                      title={rows.length === 1 ? "At least one row required" : "Remove row"}
+                    >
+                      ×
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-
         <button className="bl-btn-add" onClick={addRow}>
           + Add More
         </button>

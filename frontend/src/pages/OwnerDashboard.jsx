@@ -8,9 +8,9 @@ export default function OwnerDashboard() {
   const [err, setErr] = useState(null);
 
   const [summary, setSummary] = useState({
-    today: { revenue: 0, bills: 0, taxes: 0 },
-    month: { revenue: 0, bills: 0, taxes: 0 },
-    year:  { revenue: 0, bills: 0, taxes: 0 },
+    today: { revenue: 0, bills: 0, taxes: 0, purchases: 0 },
+    month: { revenue: 0, bills: 0, taxes: 0, purchases: 0 },
+    year:  { revenue: 0, bills: 0, taxes: 0, purchases: 0 },
     lowStockCount: 0
   });
 
@@ -71,6 +71,10 @@ export default function OwnerDashboard() {
             <span>Taxes</span>
             <strong>₹ {Number(summary?.today?.taxes || 0).toLocaleString()}</strong>
           </div>
+          <div className="kpi-card__row">
+            <span>Purchases</span>
+            <strong>₹ {Number(summary?.today?.purchases || 0).toLocaleString()}</strong>
+          </div>
         </div>
 
         <div className="card kpi-card">
@@ -89,6 +93,10 @@ export default function OwnerDashboard() {
             <span>Taxes</span>
             <strong>₹ {Number(summary?.month?.taxes || 0).toLocaleString()}</strong>
           </div>
+          <div className="kpi-card__row">
+            <span>Purchases</span>
+            <strong>₹ {Number(summary?.month?.purchases || 0).toLocaleString()}</strong>
+          </div>
         </div>
 
         <div className="card kpi-card">
@@ -106,6 +114,10 @@ export default function OwnerDashboard() {
           <div className="kpi-card__row">
             <span>Taxes</span>
             <strong>₹ {Number(summary?.year?.taxes || 0).toLocaleString()}</strong>
+          </div>
+          <div className="kpi-card__row">
+            <span>Purchases</span>
+            <strong>₹ {Number(summary?.year?.purchases || 0).toLocaleString()}</strong>
           </div>
         </div>
 
@@ -177,7 +189,7 @@ export default function OwnerDashboard() {
                 )}
                 {recentBills.map(b => (
                   <tr key={b.bill_id}>
-                    <td className="mono">#{b.bill_id}</td>
+                    <td className="mono">{b.bill_number || `#${b.bill_id}`}</td>
                     <td>{b.customer_name}</td>
                     <td><span className={`badge badge--${(b.status || 'UNPAID').toLowerCase()}`}>{b.status}</span></td>
                     <td>₹ {Number(b.total_amount).toLocaleString()}</td>

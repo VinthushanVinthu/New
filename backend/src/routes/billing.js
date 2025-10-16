@@ -59,12 +59,13 @@ router.post(
       let subtotal = 0;
       for (const it of items) {
         const [[s]] = await conn.query(
-          "SELECT price, stock_quantity FROM sarees WHERE id = ? AND shop_id = ? FOR UPDATE",
+          "SELECT price, discount, stock_quantity FROM sarees WHERE id = ? AND shop_id = ? FOR UPDATE",
           [it.saree_id, shop_id]
         );
         if (!s) throw new Error("Invalid saree");
         if (Number(s.stock_quantity) < Number(it.quantity)) throw new Error("Insufficient stock");
-        subtotal += Number(s.price) * Number(it.quantity);
+        const unitPrice = Math.max(0, Number(s.price) - Number(s.discount || 0));
+        subtotal += unitPrice * Number(it.quantity);
       }
 
       const cappedDiscount = Math.min(round2(discount), subtotal);
@@ -78,22 +79,47 @@ router.post(
       if (paid >= total_amount) status = "PAID";
       else if (paid > 0) status = "PARTIAL";
 
+      const now = new Date();
+      const billPeriod = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const [[seqRow]] = await conn.query(
+        `SELECT COALESCE(MAX(bill_sequence), 0) AS currentSeq
+           FROM bills
+          WHERE shop_id = ? AND bill_period = ?`,
+        [shop_id, billPeriod]
+      );
+      const nextSeq = Number(seqRow?.currentSeq || 0) + 1;
+      const billNumber = `${billPeriod}-${String(nextSeq).padStart(4, "0")}`;
+
       const [bill] = await conn.query(
         `INSERT INTO bills
-           (shop_id, customer_id, user_id, subtotal, discount, tax, total_amount, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [shop_id, resolvedCustomerId, req.user.id, round2(subtotal), round2(cappedDiscount), tax, total_amount, status]
+           (shop_id, customer_id, user_id, bill_period, bill_sequence, bill_number,
+            subtotal, discount, tax, total_amount, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          shop_id,
+          resolvedCustomerId,
+          req.user.id,
+          billPeriod,
+          nextSeq,
+          billNumber,
+          round2(subtotal),
+          round2(cappedDiscount),
+          tax,
+          total_amount,
+          status
+        ]
       );
       const billId = bill.insertId;
 
       for (const it of items) {
         const [[s]] = await conn.query(
-          "SELECT price FROM sarees WHERE id = ? AND shop_id = ?",
+          "SELECT price, discount FROM sarees WHERE id = ? AND shop_id = ?",
           [it.saree_id, shop_id]
         );
+        const unitPrice = Math.max(0, Number(s?.price || 0) - Number(s?.discount || 0));
         await conn.query(
           "INSERT INTO bill_items (bill_id, saree_id, quantity, price) VALUES (?, ?, ?, ?)",
-          [billId, it.saree_id, it.quantity, Number(s.price)]
+          [billId, it.saree_id, it.quantity, unitPrice]
         );
         await conn.query(
           "UPDATE sarees SET stock_quantity = stock_quantity - ? WHERE id = ? AND shop_id = ?",
@@ -111,6 +137,9 @@ router.post(
       await conn.commit();
       res.json({
         bill_id: billId,
+        bill_number: billNumber,
+        bill_period: billPeriod,
+        bill_sequence: nextSeq,
         customer_id: resolvedCustomerId,
         subtotal: round2(subtotal),
         discount: round2(cappedDiscount),
@@ -155,7 +184,8 @@ router.get(
       const [items] = await conn.query(
         `SELECT bi.bill_item_id, bi.saree_id, bi.quantity, bi.price,
                 (bi.quantity * bi.price) AS line_total,
-                sa.name AS saree_name
+                sa.name AS saree_name,
+                sa.discount AS saree_discount
            FROM bill_items bi
            JOIN sarees sa ON sa.id = bi.saree_id
           WHERE bi.bill_id = ?`,
@@ -192,35 +222,99 @@ router.get(
   requireAuth(["Owner", "Manager", "Cashier"]),
   async (req, res) => {
     const { shop_id } = req.params;
+    const { range, start, end } = req.query;
     const isCashier = req.user.role === "Cashier";
+
+    function buildDateFilter() {
+      if (start || end) {
+        const startDate = start ? new Date(start) : null;
+        const endDate = end ? new Date(end) : null;
+        if ((startDate && Number.isNaN(startDate.getTime())) || (endDate && Number.isNaN(endDate.getTime()))) {
+          throw new Error("Invalid date filter");
+        }
+        return {
+          start: startDate ? startDate.toISOString().slice(0, 19).replace("T", " ") : null,
+          end: endDate ? endDate.toISOString().slice(0, 19).replace("T", " ") : null
+        };
+      }
+
+      const now = new Date();
+      switch ((range || "").toLowerCase()) {
+        case "today": {
+          const startDate = new Date(now);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 1);
+          return {
+            start: startDate.toISOString().slice(0, 19).replace("T", " "),
+            end: endDate.toISOString().slice(0, 19).replace("T", " ")
+          };
+        }
+        case "month": {
+          const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          return {
+            start: startDate.toISOString().slice(0, 19).replace("T", " "),
+            end: endDate.toISOString().slice(0, 19).replace("T", " ")
+          };
+        }
+        case "year": {
+          const startDate = new Date(now.getFullYear(), 0, 1);
+          const endDate = new Date(now.getFullYear() + 1, 0, 1);
+          return {
+            start: startDate.toISOString().slice(0, 19).replace("T", " "),
+            end: endDate.toISOString().slice(0, 19).replace("T", " ")
+          };
+        }
+        default:
+          return { start: null, end: null };
+      }
+    }
 
     const conn = await db.getConnection();
     try {
+      const { start: startBound, end: endBound } = buildDateFilter();
+      const dateClause = startBound || endBound ? " AND b.created_at BETWEEN ? AND ?" : "";
+      const dateParams = startBound || endBound ? [startBound || "1970-01-01 00:00:00", endBound || "2999-12-31 23:59:59"] : [];
+
       let rows;
       if (isCashier) {
         // Cashier sees only their own bills for this shop
         [rows] = await conn.query(
-          `SELECT b.bill_id, b.customer_id, b.user_id, b.subtotal, b.discount, b.tax, b.total_amount, b.status, b.created_at,
+          `SELECT b.bill_id, b.bill_number, b.bill_period, b.bill_sequence,
+                  b.customer_id, b.user_id, b.subtotal, b.discount, b.tax, b.total_amount, b.status, b.created_at,
                   u.name AS cashier_name
              FROM bills b
         LEFT JOIN users u ON b.user_id = u.id
-            WHERE b.shop_id = ? AND b.user_id = ?
+            WHERE b.shop_id = ? AND b.user_id = ?${dateClause}
             ORDER BY b.created_at DESC`,
-          [shop_id, req.user.id]
+          [shop_id, req.user.id, ...dateParams]
         );
       } else {
         // Owner/Manager see all bills for this shop
         [rows] = await conn.query(
-          `SELECT b.bill_id, b.customer_id, b.user_id, b.subtotal, b.discount, b.tax, b.total_amount, b.status, b.created_at,
+          `SELECT b.bill_id, b.bill_number, b.bill_period, b.bill_sequence,
+                  b.customer_id, b.user_id, b.subtotal, b.discount, b.tax, b.total_amount, b.status, b.created_at,
                   u.name AS cashier_name
              FROM bills b
         LEFT JOIN users u ON b.user_id = u.id
-            WHERE b.shop_id = ?
+            WHERE b.shop_id = ?${dateClause}
             ORDER BY b.created_at DESC`,
-          [shop_id]
+          [shop_id, ...dateParams]
         );
       }
-      res.json({ bills: rows });
+      const summary = rows.reduce(
+        (acc, row) => {
+          acc.count += 1;
+          acc.subtotal += Number(row.subtotal || 0);
+          acc.discount += Number(row.discount || 0);
+          acc.tax += Number(row.tax || 0);
+          acc.total += Number(row.total_amount || 0);
+          return acc;
+        },
+        { count: 0, subtotal: 0, discount: 0, tax: 0, total: 0 }
+      );
+      res.json({ bills: rows, summary, range: range || null, start: startBound, end: endBound });
     } catch (e) {
       res.status(400).json({ message: e.message });
     } finally {
@@ -233,16 +327,74 @@ router.get(
   "/mine",
   requireAuth(["Cashier"]),
   async (req, res) => {
-    const { shop_id } = req.query;
+    const { shop_id, range, start, end } = req.query;
     if (!shop_id) return res.status(400).json({ message: "shop_id is required" });
+
+    const now = new Date();
+    let startBound = null;
+    let endBound = null;
+    if (start || end) {
+      const startDate = start ? new Date(start) : null;
+      const endDate = end ? new Date(end) : null;
+      if ((startDate && Number.isNaN(startDate.getTime())) || (endDate && Number.isNaN(endDate.getTime()))) {
+        return res.status(400).json({ message: "Invalid date filter" });
+      }
+      startBound = startDate ? startDate.toISOString().slice(0, 19).replace("T", " ") : null;
+      endBound = endDate ? endDate.toISOString().slice(0, 19).replace("T", " ") : null;
+    } else {
+      switch ((range || "").toLowerCase()) {
+        case "today": {
+          const startDate = new Date(now);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 1);
+          startBound = startDate.toISOString().slice(0, 19).replace("T", " ");
+          endBound = endDate.toISOString().slice(0, 19).replace("T", " ");
+          break;
+        }
+        case "month": {
+          const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          startBound = startDate.toISOString().slice(0, 19).replace("T", " ");
+          endBound = endDate.toISOString().slice(0, 19).replace("T", " ");
+          break;
+        }
+        case "year": {
+          const startDate = new Date(now.getFullYear(), 0, 1);
+          const endDate = new Date(now.getFullYear() + 1, 0, 1);
+          startBound = startDate.toISOString().slice(0, 19).replace("T", " ");
+          endBound = endDate.toISOString().slice(0, 19).replace("T", " ");
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    const dateClause = startBound || endBound ? " AND b.created_at BETWEEN ? AND ?" : "";
+    const dateParams = startBound || endBound ? [startBound || "1970-01-01 00:00:00", endBound || "2999-12-31 23:59:59"] : [];
+
     const [rows] = await db.query(
-      `SELECT b.bill_id, b.customer_id, b.user_id, b.subtotal, b.discount, b.tax, b.total_amount, b.status, b.created_at
+      `SELECT b.bill_id, b.bill_number, b.bill_period, b.bill_sequence,
+              b.customer_id, b.user_id, b.subtotal, b.discount, b.tax, b.total_amount, b.status, b.created_at
          FROM bills b
-        WHERE b.shop_id = ? AND b.user_id = ?
+        WHERE b.shop_id = ? AND b.user_id = ?${dateClause}
         ORDER BY b.created_at DESC`,
-      [shop_id, req.user.id]
+     [shop_id, req.user.id, ...dateParams]
     );
-    res.json({ bills: rows });
+
+    const summary = rows.reduce(
+      (acc, row) => {
+        acc.count += 1;
+        acc.subtotal += Number(row.subtotal || 0);
+        acc.discount += Number(row.discount || 0);
+        acc.tax += Number(row.tax || 0);
+        acc.total += Number(row.total_amount || 0);
+        return acc;
+      },
+      { count: 0, subtotal: 0, discount: 0, tax: 0, total: 0 }
+    );
+    res.json({ bills: rows, summary, range: range || null, start: startBound, end: endBound });
   }
 );
 
@@ -346,12 +498,12 @@ router.put(
       let subtotal = 0;
       for (const [sid, qty] of newQty.entries()) {
         if (qty === 0) continue;
-        const [[s]] = await conn.query("SELECT price FROM sarees WHERE id = ? AND shop_id = ?", [sid, bill.shop_id]);
-        const price = Number(s.price);
-        subtotal += price * qty;
+        const [[s]] = await conn.query("SELECT price, discount FROM sarees WHERE id = ? AND shop_id = ?", [sid, bill.shop_id]);
+        const unitPrice = Math.max(0, Number(s?.price || 0) - Number(s?.discount || 0));
+        subtotal += unitPrice * qty;
         await conn.query(
           "INSERT INTO bill_items (bill_id, saree_id, quantity, price) VALUES (?, ?, ?, ?)",
-          [bill_id, sid, qty, price]
+          [bill_id, sid, qty, unitPrice]
         );
       }
 

@@ -58,6 +58,29 @@ managerDashboardRouter.get("/overview", requireAuth(["Owner", "Manager"]), async
       taxesToday: toNum(k.taxesToday),
       avgBill: toNum(k.avgBill),
     };
+    const [[purchaseTodayRow]] = await conn.query(
+      `
+      SELECT COALESCE(SUM(total_amount),0) AS amt
+      FROM purchase_orders
+      WHERE shop_id = ?
+        AND status = 'RECEIVED'
+        AND DATE(received_at) = CURDATE()
+      `,
+      [shop_id]
+    );
+    const [[purchase30Row]] = await conn.query(
+      `
+      SELECT COALESCE(SUM(total_amount),0) AS amt
+      FROM purchase_orders
+      WHERE shop_id = ?
+        AND status = 'RECEIVED'
+        AND received_at >= (NOW() - INTERVAL 30 DAY)
+      `,
+      [shop_id]
+    );
+    kpis.purchaseToday = toNum(purchaseTodayRow?.amt);
+    kpis.purchase30d = toNum(purchase30Row?.amt);
+    kpis.salesToday = kpis.todaySales;
 
     // --- Payment mix (Today) from payments table
     const [payRows] = await conn.query(
@@ -83,7 +106,7 @@ managerDashboardRouter.get("/overview", requireAuth(["Owner", "Manager"]), async
     const [recentBills] = await conn.query(
       `
       SELECT 
-        b.bill_id, b.created_at, b.total_amount, b.status,
+        b.bill_id, b.bill_number, b.created_at, b.total_amount, b.status,
         COALESCE(c.name, 'Walk-in') AS customer_name
       FROM bills b
       LEFT JOIN customers c ON c.customer_id = b.customer_id
@@ -98,7 +121,7 @@ managerDashboardRouter.get("/overview", requireAuth(["Owner", "Manager"]), async
     const [pendingBills] = await conn.query(
       `
       SELECT 
-        b.bill_id, b.created_at, b.total_amount, b.status,
+        b.bill_id, b.bill_number, b.created_at, b.total_amount, b.status,
         COALESCE(c.name, 'Walk-in') AS customer_name
       FROM bills b
       LEFT JOIN customers c ON c.customer_id = b.customer_id

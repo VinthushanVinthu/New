@@ -70,9 +70,9 @@ ownerDashboardRouter.get("/dashboard", requireAuth(["Owner"]), async (req, res) 
     if (shopIds.length === 0) {
       return res.json({
         summary: {
-          today: { revenue: 0, bills: 0, taxes: 0 },
-          month: { revenue: 0, bills: 0, taxes: 0 },
-          year:  { revenue: 0, bills: 0, taxes: 0 },
+          today: { revenue: 0, bills: 0, taxes: 0, purchases: 0 },
+          month: { revenue: 0, bills: 0, taxes: 0, purchases: 0 },
+          year:  { revenue: 0, bills: 0, taxes: 0, purchases: 0 },
           lowStockCount: 0
         },
         recentCustomers: [],
@@ -102,10 +102,22 @@ ownerDashboardRouter.get("/dashboard", requireAuth(["Owner"]), async (req, res) 
         [inShop, start, end]
       );
       const r = rows[0] || {};
+      const [purchaseRows] = await conn.query(
+        `
+        SELECT COALESCE(SUM(total_amount), 0) AS purchases
+        FROM purchase_orders
+        WHERE shop_id IN (?)
+          AND status = 'RECEIVED'
+          AND received_at IS NOT NULL
+          AND received_at >= ? AND received_at <= ?
+        `,
+        [inShop, start, end]
+      );
       return {
         revenue: Number(r.revenue || 0),
         bills: Number(r.bills || 0),
-        taxes: Number(r.taxes || 0)
+        taxes: Number(r.taxes || 0),
+        purchases: Number((purchaseRows[0] || {}).purchases || 0)
       };
     }
 
@@ -116,7 +128,7 @@ ownerDashboardRouter.get("/dashboard", requireAuth(["Owner"]), async (req, res) 
       kpiBetween(year.start, year.end),
     ]);
 
-    // ---- recent customers (latest 10)
+// ---- recent customers (latest 10)
     const [recentCustomers] = await conn.query(
       `
       SELECT c.customer_id, c.name, c.phone, c.email, c.created_at, c.shop_id
@@ -133,6 +145,7 @@ ownerDashboardRouter.get("/dashboard", requireAuth(["Owner"]), async (req, res) 
       `
       SELECT
         b.bill_id,
+        b.bill_number,
         b.shop_id,
         b.created_at,
         b.total_amount,
@@ -238,7 +251,7 @@ ownerDashboardRouter.get("/bills", requireAuth(["Owner"]), async (req, res) => {
     const [rows] = await conn.query(
       `
       SELECT
-        b.bill_id, b.shop_id, b.created_at, b.total_amount, b.status,
+        b.bill_id, b.bill_number, b.shop_id, b.created_at, b.total_amount, b.status,
         u.name AS cashier_name,
         COALESCE(c.name, 'Walk-in') AS customer_name
       FROM bills b

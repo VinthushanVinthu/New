@@ -51,6 +51,11 @@ function buildInvoiceHtml({
   cashierName,
 }) {
   const nowStr = fmtDateTimeForPrint();
+  const shopName = shop?.shop_name || shop?.name || "Shop";
+  const addressLine = shop?.address_line || shop?.address || "";
+  const locationLine = [shop?.city, shop?.state, shop?.postal_code || shop?.zip]
+    .filter(Boolean)
+    .join(" ");
   const createdLine = createdAt ? `<div class="muted">Created: ${formatDateTime(createdAt)}</div>` : "";
   const cashierLine = cashierName ? `<div class="muted">Cashier: ${cashierName}</div>` : "";
 
@@ -102,10 +107,10 @@ function buildInvoiceHtml({
   <div class="wrap">
     <div class="head">
       <div>
-        <h1>${shop?.name || "Shop"}</h1>
+        <h1>${shopName}</h1>
         <div class="muted">
-          ${shop?.address || ""}${shop?.address ? "<br/>" : ""}
-          ${shop?.city || ""} ${shop?.state || ""} ${shop?.zip || ""}<br/>
+          ${addressLine ? `${addressLine}<br/>` : ""}
+          ${locationLine || ""}${locationLine && shop?.phone ? "<br/>" : ""}
           ${shop?.phone ? "Phone: " + shop.phone : ""}
         </div>
       </div>
@@ -315,14 +320,17 @@ function BillEditor({
 
   const paidSum = useMemo(() => (payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0), [payments]);
   const dueNow  = Number(total) - paidSum;
+  const addressLine = shop?.address_line || shop?.address || "";
+  const locationLine = [shop?.city, shop?.state, shop?.postal_code || shop?.zip].filter(Boolean).join(", ");
+  const phoneLine = shop?.phone || "";
 
   return (
     <div className="bills-editor">
       {/* Meta header */}
       <div className="bills-meta">
         <div className="bills-meta__row">
-          <div><span className="bills-label muted">Shop</span> <strong>{shop?.name || "-"}</strong></div>
-          {meta?.billNo && <div><span className="bills-label muted">Bill #</span> <strong>#{meta.billNo}</strong></div>}
+          <div><span className="bills-label muted">Shop</span> <strong>{shop?.shop_name || shop?.name || "-"}</strong></div>
+          {meta?.billNo && <div><span className="bills-label muted">Bill</span> <strong>{meta.billNo}</strong></div>}
           {meta?.status && <div><span className="bills-label muted">Status</span> <span className={`bills-pill bills-pill--${(meta.status || "").toLowerCase()}`}>{meta.status}</span></div>}
         </div>
         <div className="bills-meta__row">
@@ -334,6 +342,13 @@ function BillEditor({
             </div>
           )}
         </div>
+        {(addressLine || locationLine || phoneLine) && (
+          <div className="bills-meta__row">
+            {addressLine && <div><span className="bills-label muted">Address</span> {addressLine}</div>}
+            {locationLine && <div><span className="bills-label muted">Location</span> {locationLine}</div>}
+            {phoneLine && <div><span className="bills-label muted">Phone</span> {phoneLine}</div>}
+          </div>
+        )}
       </div>
 
       {/* Items */}
@@ -352,7 +367,11 @@ function BillEditor({
             <tr key={r.id}>
               <td>
                 {readOnly ? (
-                  <div>{r.item?.name || `#${r.item?.id || "-"}`}</div>
+                  <div>
+                    {r.item?.item_code ? <span className="mono">{r.item.item_code}</span> : null}
+                    {r.item?.item_code ? " — " : ""}
+                    {r.item?.name || `#${r.item?.id || "-"}`}
+                  </div>
                 ) : (
                   <select
                     value={r.item?.id || ""}
@@ -364,7 +383,7 @@ function BillEditor({
                       .filter(s => !selectedIds.includes(Number(s.id)) || s.id === r.item?.id)
                       .map(s => (
                         <option key={s.id} value={s.id}>
-                          {s.name} (₹{Number(s.price).toFixed(2)}, Stock: {s.stock_quantity})
+                          {s.item_code ? `${s.item_code} — ${s.name}` : s.name} (₹{Number(s.price).toFixed(2)}, Stock: {s.stock_quantity})
                         </option>
                       ))}
                   </select>
@@ -629,7 +648,7 @@ function BillDetailPage({
     };
 
     const html = buildInvoiceHtml({
-      billId: bill.bill_id,
+      billId: bill.bill_number || bill.bill_id,
       shop,
       customer,
       rows,
@@ -679,11 +698,12 @@ function BillDetailPage({
 
   const bill = detail.bill;
   const taxPercent = Number(bill.tax_percentage ?? taxPercentDefault) || 0;
+  const billRef = bill.bill_number || `#${bill.bill_id}`;
 
   return (
     <div className="card">
       <div className="bills-header">
-        <h2>{mode === "edit" ? `Edit Bill #${bill.bill_id}` : `Bill #${bill.bill_id}`}</h2>
+        <h2>{mode === "edit" ? `Edit Bill ${billRef}` : `Bill ${billRef}`}</h2>
         <div className="bills-actions">
           <button className="bills-btn bills-btn--outline" onClick={onBack}>← Back</button>
           {mode === "view" && (
@@ -706,7 +726,7 @@ function BillDetailPage({
         taxPercent={taxPercent}
         busy={saving}
         meta={{
-          billNo: bill.bill_id,
+          billNo: billRef,
           cashier: bill.cashier_name,
           createdAt: bill.created_at,
           status: bill.status,
@@ -783,7 +803,8 @@ export default function Bills() {
   }
 
   async function deleteBill(row) {
-    if (!window.confirm(`Delete bill #${row.bill_id}? This will restore stock.`)) return;
+    const ref = row.bill_number || `#${row.bill_id}`;
+    if (!window.confirm(`Delete bill ${ref}? This will restore stock.`)) return;
     try {
       await api.delete(`/billing/${row.bill_id}`);
       setBills(prev => prev.filter(b => b.bill_id !== row.bill_id));
@@ -799,6 +820,7 @@ export default function Bills() {
     const s = (q || "").toLowerCase();
     if (!s) return bills;
     return bills.filter((b) =>
+      String(b.bill_number || b.bill_id).toLowerCase().includes(s) ||
       String(b.bill_id).includes(s) ||
       (b.status || "").toLowerCase().includes(s) ||
       (b.cashier_name || "").toLowerCase().includes(s)
@@ -811,10 +833,10 @@ export default function Bills() {
 
     const title = "Bills Summary";
     const sub = [
-      shop?.name ? `Shop: ${shop.name}` : "",
+      shop?.shop_name ? `Shop: ${shop.shop_name}` : (shop?.name ? `Shop: ${shop.name}` : ""),
       shop?.shop_id ? `Shop ID: ${shop.shop_id}` : "",
       `Generated: ${new Date().toLocaleString()}`
-    ].filter(Boolean).join("   •   ");
+    ].filter(Boolean).join(" | ");
 
     doc.setFontSize(16);
     doc.text(title, 40, 40);
@@ -824,7 +846,7 @@ export default function Bills() {
     const head = [["#", "Bill #", "Date", "Cashier", "Subtotal", "Discount", "Tax", "Total", "Status"]];
     const body = (filtered || []).map((row, idx) => ([
       String(idx + 1),
-      `#${row.bill_id}`,
+      row.bill_number ? row.bill_number : `#${row.bill_id}`,
       formatDateTime(row.created_at),
       row.cashier_name || "-",
       moneyRaw(row.subtotal),
@@ -842,7 +864,7 @@ export default function Bills() {
       headStyles: { fontStyle: "bold" },
       columnStyles: {
         0: { cellWidth: 24 },   // #
-        1: { cellWidth: 50 },   // Bill #
+        1: { cellWidth: 80 },   // Bill #
         2: { cellWidth: 110 },  // Date
         3: { cellWidth: 110 },  // Cashier
         4: { cellWidth: 60 },   // Subtotal
@@ -922,6 +944,7 @@ export default function Bills() {
                 <tr>
                   {/* Number column instead of Bill ID */}
                   <th style={{ width: "8ch" }}>#</th>
+                  <th style={{ width: "14ch" }}>Bill #</th>
                   <th style={{ width: "20ch" }}>Date</th>
                   <th>Cashier</th>
                   <th style={{ width: "14ch" }}>Subtotal</th>
@@ -934,11 +957,12 @@ export default function Bills() {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="bills-empty">No bills found.</td></tr>
+                  <tr><td colSpan={10} className="bills-empty">No bills found.</td></tr>
                 ) : (
                   filtered.map((row, idx) => (
                     <tr key={row.bill_id}>
                       <td>{idx + 1}</td> {/* running number */}
+                      <td className="mono">{row.bill_number || `#${row.bill_id}`}</td>
                       <td>{formatDateTime(row.created_at)}</td>
                       <td>{row.cashier_name || "-"}</td>
                       <td>{money(row.subtotal)}</td>
