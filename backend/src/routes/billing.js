@@ -8,6 +8,20 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
 const APPROVAL_REQUIRED_MESSAGE = "Manager approval required before editing this bill.";
 
+function formatDisplayNumber(period, sequence, fallback = null) {
+  if (period && sequence !== undefined && sequence !== null) {
+    return `${period}-${String(sequence).padStart(4, "0")}`;
+  }
+  if (fallback) {
+    const parts = String(fallback).split("-");
+    if (parts.length >= 2) {
+      return parts.slice(parts.length - 2).join("-");
+    }
+    return fallback;
+  }
+  return null;
+}
+
 async function assertCanManageShop(conn, user, shopId) {
   if (!Number.isFinite(Number(shopId))) {
     throw new Error("Invalid shop_id");
@@ -173,6 +187,7 @@ router.post(
         [nextSeq, shop_id, billPeriod]
       );
       const billNumber = `${shop_id}-${billPeriod}-${String(nextSeq).padStart(4, "0")}`;
+      const billDisplayNumber = formatDisplayNumber(billPeriod, nextSeq);
 
       const [bill] = await conn.query(
         `INSERT INTO bills
@@ -222,6 +237,7 @@ router.post(
       res.json({
         bill_id: billId,
         bill_number: billNumber,
+        bill_display_number: billDisplayNumber,
         bill_period: billPeriod,
         bill_sequence: nextSeq,
         customer_id: resolvedCustomerId,
@@ -292,6 +308,10 @@ router.get(
         params
       );
 
+      for (const row of rows) {
+        row.bill_display_number = formatDisplayNumber(row.bill_period, row.bill_sequence, row.bill_number);
+      }
+
       res.json(rows);
     } catch (e) {
       if (e.message === "Forbidden") {
@@ -328,6 +348,7 @@ router.get(
       if (!bill.bill_number && bill.bill_period && bill.bill_sequence != null) {
         bill.bill_number = `${bill.shop_id}-${bill.bill_period}-${String(bill.bill_sequence).padStart(4, "0")}`;
       }
+      bill.display_number = formatDisplayNumber(bill.bill_period, bill.bill_sequence, bill.bill_number);
       if (req.user.role === "Cashier" && bill.user_id !== req.user.id) {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -477,6 +498,9 @@ router.get(
           [shop_id, ...dateParams]
         );
       }
+      rows.forEach((row) => {
+        row.bill_display_number = formatDisplayNumber(row.bill_period, row.bill_sequence, row.bill_number);
+      });
       const summary = rows.reduce(
         (acc, row) => {
           acc.count += 1;

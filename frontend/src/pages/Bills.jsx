@@ -692,7 +692,7 @@ function BillDetailPage({
     };
 
     const html = buildInvoiceHtml({
-      billId: bill.bill_number || bill.bill_id,
+      billId: bill.display_number || bill.bill_number || bill.bill_id,
       shop,
       customer,
       rows,
@@ -742,7 +742,7 @@ function BillDetailPage({
 
   const bill = detail.bill;
   const taxPercent = Number(bill.tax_percentage ?? taxPercentDefault) || 0;
-  const billRef = bill.bill_number || `#${bill.bill_id}`;
+  const billRef = bill.display_number || bill.bill_number || `#${bill.bill_id}`;
   const editPermission = detail?.edit_permission || { canEdit: true, latestRequest: null };
   const latestRequest = editPermission.latestRequest;
   const approvalStatus = latestRequest?.status || null;
@@ -1110,7 +1110,7 @@ export default function Bills() {
                   filtered.map((row, idx) => (
                     <tr key={row.bill_id}>
                       <td>{idx + 1}</td> {/* running number */}
-                      <td className="mono">{row.bill_number || `#${row.bill_id}`}</td>
+                      <td className="mono">{row.bill_display_number || row.bill_number || `#${row.bill_id}`}</td>
                       <td>{formatDateTime(row.created_at)}</td>
                       <td>{row.cashier_name || "-"}</td>
                       <td>{money(row.subtotal)}</td>

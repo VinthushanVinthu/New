@@ -230,6 +230,20 @@ export default function Billing() {
   const [newCust, setNewCust] = useState({ name: "", phone: "", email: "" });
   const [customerBusy, setCustomerBusy] = useState(false);
 
+  function resolvePrintableCustomer() {
+    if (customer && (customer.name || customer.phone || customer.email || customer.customer_id)) {
+      return customer;
+    }
+    if (newCust?.name || newCust?.phone || newCust?.email) {
+      return {
+        name: newCust.name || "Walk-in Customer",
+        phone: newCust.phone || "",
+        email: newCust.email || "",
+      };
+    }
+    return { name: "Walk-in Customer", phone: "", email: "" };
+  }
+
   // Result / UI
   const [isCreating, setIsCreating] = useState(false);
 
@@ -430,7 +444,6 @@ export default function Billing() {
 
   const disableCreate =
     !shop?.shop_id ||
-    !customer?.customer_id || // must have a customer chosen/created first
     rows.length === 0 ||
     subtotal <= 0 ||
     hasRowIssues ||
@@ -453,15 +466,16 @@ export default function Billing() {
   // === NEW: Print Preview using current on-screen data (iframe, no popup) ===
   function printPreview() {
     const hasLines = rows.some((r) => r.item && Number(r.qty) > 0);
-    if (!hasLines) {
-      alert("Add at least one item with quantity before printing.");
-      return;
-    }
-    const billId = "(DRAFT)";
-    const html = buildInvoiceHtml({
-      billId,
-      shop,
-      customer,
+  if (!hasLines) {
+    alert("Add at least one item with quantity before printing.");
+    return;
+  }
+  const billId = "(DRAFT)";
+  const printableCustomer = resolvePrintableCustomer();
+  const html = buildInvoiceHtml({
+    billId,
+    shop,
+    customer: printableCustomer,
       rows,
       subtotal,
       discount: Number(cappedDiscount),
@@ -479,11 +493,7 @@ export default function Billing() {
   // ---------------- Create Bill ----------------
   async function createBill() {
     if (disableCreate) {
-      alert(
-        (paymentInvalid && paymentInvalid) ||
-          (!customer?.customer_id && "Please select or create a customer first.") ||
-          "Please fix errors before creating the bill."
-      );
+      alert((paymentInvalid && paymentInvalid) || "Please fix errors before creating the bill.");
       return;
     }
 
@@ -494,7 +504,7 @@ export default function Billing() {
 
     const payload = {
       shop_id: shop.shop_id,
-      customer_id: customer.customer_id,
+      customer_id: customer?.customer_id || null,
       items,
       discount: Number(cappedDiscount),
       payment_method: paymentMethod,
@@ -506,13 +516,19 @@ export default function Billing() {
       setIsCreating(true);
       const { data } = await api.post("/billing/create", payload);
 
-      const billId = data?.bill_id ?? "—";
+      const billId =
+        data?.bill_display_number ||
+        data?.bill_number ||
+        (data?.bill_period && data?.bill_sequence != null
+          ? `${data.bill_period}-${String(data.bill_sequence).padStart(4, "0")}`
+          : data?.bill_id ?? "-");
+      const printableCustomer = resolvePrintableCustomer();
 
       // Build & print via iframe (no popups)
       const html = buildInvoiceHtml({
         billId,
         shop,
-        customer,
+        customer: printableCustomer,
         rows,
         subtotal,
         discount: Number(cappedDiscount),
@@ -809,13 +825,7 @@ export default function Billing() {
             className="bl-btn-create"
             onClick={createBill}
             disabled={disableCreate || isCreating}
-            title={
-              disableCreate
-                ? !customer?.customer_id
-                  ? "Pick or create a customer first"
-                  : "Fix errors before creating bill"
-                : "Create Bill"
-            }
+            title={disableCreate ? "Fix errors before creating bill" : "Create Bill"}
           >
             {isCreating ? "Creating..." : "Create Bill"}
           </button>
