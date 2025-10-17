@@ -2,6 +2,8 @@
 import { Router } from "express";
 import { db } from "../config/db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { sendEmail } from "../utils/mailer.js";
+import { buildBillEmailContent } from "../utils/emailTemplates.js";
 
 const router = Router();
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
@@ -93,6 +95,8 @@ router.post(
     }
 
     const conn = await db.getConnection();
+    let emailJob = null;
+    let createdBillId = null;
     try {
       await conn.beginTransaction();
 
@@ -123,23 +127,56 @@ router.post(
         resolvedCustomerId = ins.insertId;
       }
 
+      let customerDetails = {
+        id: resolvedCustomerId,
+        name: custName,
+        email: custEmail,
+        phone: custPhone,
+      };
+      if (resolvedCustomerId && (!customerDetails.name || !customerDetails.email || !customerDetails.phone)) {
+        const [[existingCustomer]] = await conn.query(
+          "SELECT name, email, phone FROM customers WHERE customer_id = ?",
+          [resolvedCustomerId]
+        );
+        if (existingCustomer) {
+          customerDetails = {
+            id: resolvedCustomerId,
+            name: customerDetails.name || existingCustomer.name || null,
+            email: customerDetails.email || existingCustomer.email || null,
+            phone: customerDetails.phone || existingCustomer.phone || null,
+          };
+        }
+      }
+
       const [[shopRow]] = await conn.query(
-        "SELECT tax_percentage FROM shops WHERE shop_id = ?",
+        "SELECT shop_name, tax_percentage FROM shops WHERE shop_id = ?",
         [shop_id]
       );
       if (!shopRow) throw new Error("Invalid shop");
       const taxPercent = Number(shopRow.tax_percentage) || 0;
+      const shopName = shopRow.shop_name || `Shop ${shop_id}`;
 
+      const lineItems = [];
       let subtotal = 0;
       for (const it of items) {
+        const qty = Number(it.quantity);
+        if (!Number.isFinite(qty) || qty <= 0) throw new Error("Invalid quantity for item");
         const [[s]] = await conn.query(
-          "SELECT price, discount, stock_quantity FROM sarees WHERE id = ? AND shop_id = ? FOR UPDATE",
+          "SELECT name, price, discount, stock_quantity FROM sarees WHERE id = ? AND shop_id = ? FOR UPDATE",
           [it.saree_id, shop_id]
         );
         if (!s) throw new Error("Invalid saree");
-        if (Number(s.stock_quantity) < Number(it.quantity)) throw new Error("Insufficient stock");
+        if (Number(s.stock_quantity) < qty) throw new Error("Insufficient stock");
         const unitPrice = Math.max(0, Number(s.price) - Number(s.discount || 0));
-        subtotal += unitPrice * Number(it.quantity);
+        const lineTotal = unitPrice * qty;
+        subtotal += lineTotal;
+        lineItems.push({
+          saree_id: it.saree_id,
+          name: s.name || `Item ${it.saree_id}`,
+          quantity: qty,
+          unit_price: round2(unitPrice),
+          line_total: round2(lineTotal),
+        });
       }
 
       const cappedDiscount = Math.min(round2(discount), subtotal);
@@ -209,20 +246,16 @@ router.post(
         ]
       );
       const billId = bill.insertId;
+      createdBillId = billId;
 
-      for (const it of items) {
-        const [[s]] = await conn.query(
-          "SELECT price, discount FROM sarees WHERE id = ? AND shop_id = ?",
-          [it.saree_id, shop_id]
-        );
-        const unitPrice = Math.max(0, Number(s?.price || 0) - Number(s?.discount || 0));
+      for (const line of lineItems) {
         await conn.query(
           "INSERT INTO bill_items (bill_id, saree_id, quantity, price) VALUES (?, ?, ?, ?)",
-          [billId, it.saree_id, it.quantity, unitPrice]
+          [billId, line.saree_id, line.quantity, line.unit_price]
         );
         await conn.query(
           "UPDATE sarees SET stock_quantity = stock_quantity - ? WHERE id = ? AND shop_id = ?",
-          [it.quantity, it.saree_id, shop_id]
+          [line.quantity, line.saree_id, shop_id]
         );
       }
 
@@ -231,6 +264,34 @@ router.post(
           "INSERT INTO payments (bill_id, method, reference, amount) VALUES (?, ?, ?, ?)",
           [billId, payment_method, payment_reference || null, paid]
         );
+      }
+
+      const balanceDue = round2(total_amount - paid);
+
+      if (customerDetails.email) {
+        const { subject, text, html } = buildBillEmailContent({
+          shopName,
+          billNumber,
+          billDisplayNumber,
+          createdAt: now,
+          customerName: customerDetails.name || customerDetails.phone || customerDetails.email,
+          items: lineItems,
+          subtotal: round2(subtotal),
+          discount: round2(cappedDiscount),
+          tax,
+          total: total_amount,
+          paid,
+          paymentMethod: payment_method,
+          balance: balanceDue,
+        });
+
+        emailJob = () =>
+          sendEmail({
+            to: customerDetails.email,
+            subject,
+            text,
+            html,
+          });
       }
 
       await conn.commit();
@@ -248,6 +309,15 @@ router.post(
         paid,
         status,
       });
+
+      if (emailJob) {
+        emailJob().catch((err) => {
+          console.error(
+            `Failed to send bill email for bill ${createdBillId || "unknown"}:`,
+            err?.message || err
+          );
+        });
+      }
     } catch (e) {
       await conn.rollback();
       res.status(400).json({ message: e.message });

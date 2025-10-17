@@ -3,8 +3,11 @@ import { Router } from "express";
 import { db } from "../config/db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { addStockMovement } from "./_stockHelpers.js";
+import { sendEmail } from "../utils/mailer.js";
+import { buildPurchaseOrderEmailContent } from "../utils/emailTemplates.js";
 
 const router = Router();
+const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
 /** Create a PO in DRAFT */
 router.post("/po", requireAuth(["Owner","Manager"]), async (req, res) => {
@@ -92,6 +95,7 @@ router.post("/po/:po_id/items", requireAuth(["Owner","Manager"]), async (req, re
 router.post("/po/:po_id/submit", requireAuth(["Owner","Manager"]), async (req, res) => {
   const { po_id } = req.params;
   const conn = await db.getConnection();
+  let emailJob = null;
   try {
     await conn.beginTransaction();
 
@@ -102,8 +106,20 @@ router.post("/po/:po_id/submit", requireAuth(["Owner","Manager"]), async (req, r
     if (!po) throw new Error("PO not found");
     if (po.status !== 'DRAFT') throw new Error("Only DRAFT POs can be submitted");
 
+    const [[supplier]] = await conn.query(
+      `SELECT name, email, phone FROM suppliers WHERE supplier_id = ?`,
+      [po.supplier_id]
+    );
+    if (!supplier) throw new Error("Supplier not found");
+
+    const [[shopRow]] = await conn.query(
+      `SELECT shop_name FROM shops WHERE shop_id = ?`,
+      [po.shop_id]
+    );
+    const shopName = shopRow?.shop_name || `Shop ${po.shop_id}`;
+
     const [items] = await conn.query(
-      `SELECT poi.*, s.shop_id
+      `SELECT poi.*, s.shop_id, s.name AS saree_name
        FROM purchase_order_items poi
        JOIN sarees s ON s.id = poi.saree_id
        WHERE poi.po_id = ?`,
@@ -121,7 +137,28 @@ router.post("/po/:po_id/submit", requireAuth(["Owner","Manager"]), async (req, r
       throw new Error("All items must have a positive qty_ordered before submitting");
     }
 
+    const lineItems = [];
+    let computedSubtotal = 0;
+    for (const it of items) {
+      const ordered = Number(it.qty_ordered);
+      const unitCost = Number(it.unit_cost) || 0;
+      const lineTotal = unitCost * ordered;
+      computedSubtotal += lineTotal;
+      lineItems.push({
+        saree_id: it.saree_id,
+        name: it.saree_name || `Item ${it.saree_id}`,
+        quantity: ordered,
+        unit_price: round2(unitCost),
+        line_total: round2(lineTotal),
+      });
+    }
+
+    const subtotal = round2(computedSubtotal);
+    const discount = round2(Number(po.discount) || 0);
+    const tax = round2(Number(po.tax) || 0);
+    const total = round2(Math.max(0, computedSubtotal - discount + tax));
     const now = new Date();
+
     await conn.query(
       `UPDATE purchase_orders 
          SET status='ORDERED',
@@ -131,8 +168,48 @@ router.post("/po/:po_id/submit", requireAuth(["Owner","Manager"]), async (req, r
       [now, po_id]
     );
 
+    const supplierEmail = supplier.email ? String(supplier.email).trim() : "";
+    if (supplierEmail) {
+      const poNumber = `PO-${String(po_id).padStart(5, "0")}`;
+      const contactEmail =
+        (process.env.PO_CONTACT_EMAIL ||
+          process.env.SMTP_FROM ||
+          process.env.SMTP_USER ||
+          "")
+          .toString()
+          .trim() || null;
+
+      const { subject, text, html } = buildPurchaseOrderEmailContent({
+        shopName,
+        supplierName: supplier.name || "Supplier",
+        poNumber,
+        createdAt: now,
+        items: lineItems,
+        subtotal,
+        discount,
+        tax,
+        total,
+        notes: po.notes ? String(po.notes).trim() : "",
+        contactEmail,
+      });
+
+      emailJob = () =>
+        sendEmail({
+          to: supplierEmail,
+          subject,
+          text,
+          html,
+        });
+    }
+
     await conn.commit();
     res.json({ ok: true });
+
+    if (emailJob) {
+      emailJob().catch((err) => {
+        console.error(`Failed to send purchase order email for PO ${po_id}:`, err?.message || err);
+      });
+    }
   } catch (e) {
     await conn.rollback();
     res.status(400).json({ message: e.message || "Failed to submit PO" });
