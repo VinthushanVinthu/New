@@ -118,3 +118,73 @@ CREATE TABLE IF NOT EXISTS bill_edit_requests (
   KEY idx_edit_requests_shop (shop_id),
   KEY idx_edit_requests_bill (bill_id)
 );
+
+
+//new
+ALTER TABLE sarees ADD COLUMN discount DECIMAL(10,2) DEFAULT 0.00 AFTER price;
+
+
+ ALTER TABLE sarees ADD COLUMN item_code VARCHAR(80) NULL AFTER design;       
+ 
+  ALTER TABLE sarees ADD UNIQUE KEY idx_sarees_shop_code (shop_id, item_code);                                             
+  ALTER TABLE bills  ADD COLUMN bill_period CHAR(6) NULL AFTER user_id,                                                    
+                     ADD COLUMN bill_sequence INT NULL AFTER bill_period,                                                  
+                     ADD COLUMN bill_number VARCHAR(24) NULL AFTER bill_sequence,                                          
+                     ADD KEY idx_bills_period (shop_id, bill_period, bill_sequence); 
+                     
+                     
+CREATE TABLE `bill_sequences` (
+  `shop_id` int NOT NULL,
+  `bill_period` char(6) NOT NULL,
+  `last_sequence` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`shop_id`,`bill_period`),
+  CONSTRAINT `bill_sequences_ibfk_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `bill_edit_requests` (
+  `request_id` int NOT NULL AUTO_INCREMENT,
+  `bill_id` int NOT NULL,
+  `shop_id` int NOT NULL,
+  `requested_by` int NOT NULL,
+  `status` enum('PENDING','APPROVED','REJECTED','USED') NOT NULL DEFAULT 'PENDING',
+  `manager_note` varchar(255) DEFAULT NULL,
+  `requested_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `responded_at` timestamp NULL DEFAULT NULL,
+  `approved_by` int DEFAULT NULL,
+  `used_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`request_id`),
+  KEY `idx_edit_requests_status` (`status`),
+  KEY `idx_edit_requests_shop` (`shop_id`),
+  KEY `idx_edit_requests_bill` (`bill_id`),
+  CONSTRAINT `bill_edit_requests_ibfk_bill` FOREIGN KEY (`bill_id`) REFERENCES `bills` (`bill_id`) ON DELETE CASCADE,
+  CONSTRAINT `bill_edit_requests_ibfk_shop` FOREIGN KEY (`shop_id`) REFERENCES `shops` (`shop_id`),
+  CONSTRAINT `bill_edit_requests_ibfk_requestor` FOREIGN KEY (`requested_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `bill_edit_requests_ibfk_manager` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+ALTER TABLE bill_edit_requests ADD COLUMN request_reason VARCHAR(255) NULL;
+
+ALTER TABLE bill_edit_requests ADD COLUMN request_reason VARCHAR(255) NULL;   
+                                        
+ALTER TABLE bills                                                                                                     
+       MODIFY bill_period CHAR(6) NOT NULL,                                                                                
+       MODIFY bill_sequence INT NOT NULL,
+       MODIFY bill_number VARCHAR(24) NOT NULL;                  
+       
+ALTER TABLE bills                                                                                                     
+       ADD CONSTRAINT uniq_bills_sequence UNIQUE (shop_id, bill_period, bill_sequence),                                    
+       ADD CONSTRAINT uniq_bills_number UNIQUE (bill_number); 
+       
+CREATE TABLE bill_sequences (                                                                                         
+       shop_id INT NOT NULL,                                                                                               
+       bill_period CHAR(6) NOT NULL,                                                                                       
+       last_sequence INT NOT NULL DEFAULT 0,                                                                               
+       PRIMARY KEY (shop_id, bill_period)                                                                                  
+     );    
+     
+     
+     UPDATE bills                                                                                                             
+  SET bill_number = CONCAT(shop_id, '-', bill_period, '-', LPAD(bill_sequence, 4, '0'))                                    
+  WHERE bill_number IS NULL OR bill_number NOT LIKE CONCAT(shop_id, '-%'); 
