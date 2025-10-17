@@ -902,6 +902,29 @@ export default function Bills() {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [filterYear, setFilterYear] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+
+  const yearOptions = useMemo(() => {
+    const unique = new Set();
+    bills.forEach((bill) => {
+      if (!bill?.created_at) return;
+      const dt = new Date(bill.created_at);
+      if (!Number.isNaN(dt.getTime())) {
+        unique.add(String(dt.getFullYear()));
+      }
+    });
+    return Array.from(unique).sort((a, b) => Number(b) - Number(a));
+  }, [bills]);
+
+  const hasDateFilters = Boolean(filterYear || filterMonth || filterDate);
+
+  const clearFilters = () => {
+    setFilterYear("");
+    setFilterMonth("");
+    setFilterDate("");
+  };
 
   // "list" or "detail"
   const [page, setPage] = useState("list");
@@ -966,14 +989,36 @@ export default function Bills() {
 
   const filtered = useMemo(() => {
     const s = (q || "").toLowerCase();
-    if (!s) return bills;
-    return bills.filter((b) =>
-      String(b.bill_number || b.bill_id).toLowerCase().includes(s) ||
-      String(b.bill_id).includes(s) ||
-      (b.status || "").toLowerCase().includes(s) ||
-      (b.cashier_name || "").toLowerCase().includes(s)
-    );
-  }, [q, bills]);
+    return bills.filter((bill) => {
+      let yearStr = "";
+      let monthStr = "";
+      let dateStr = "";
+      if (bill?.created_at) {
+        const created = new Date(bill.created_at);
+        if (!Number.isNaN(created.getTime())) {
+          const year = created.getFullYear();
+          const month = String(created.getMonth() + 1).padStart(2, "0");
+          const day = String(created.getDate()).padStart(2, "0");
+          yearStr = String(year);
+          monthStr = `${yearStr}-${month}`;
+          dateStr = `${monthStr}-${day}`;
+        }
+      }
+
+      if (filterYear && yearStr !== filterYear) return false;
+      if (filterMonth && monthStr !== filterMonth) return false;
+      if (filterDate && dateStr !== filterDate) return false;
+
+      if (!s) return true;
+
+      return (
+        String(bill.bill_number || bill.bill_id).toLowerCase().includes(s) ||
+        String(bill.bill_id).includes(s) ||
+        (bill.status || "").toLowerCase().includes(s) ||
+        (bill.cashier_name || "").toLowerCase().includes(s)
+      );
+    });
+  }, [bills, q, filterYear, filterMonth, filterDate]);
 
   // --------- Export list PDF (filtered) ----------
   function exportBillsPdf() {
@@ -1063,6 +1108,64 @@ export default function Bills() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
+            <div className="bills-filters">
+              <select
+                className="bills-input bills-filter-control"
+                value={filterYear}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilterYear(value);
+                  if (value) {
+                    setFilterMonth("");
+                    setFilterDate("");
+                  }
+                }}
+                aria-label="Filter bills by year"
+              >
+                <option value="">All years</option>
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="bills-input bills-filter-control"
+                type="month"
+                value={filterMonth}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilterMonth(value);
+                  if (value) {
+                    setFilterYear("");
+                    setFilterDate("");
+                  }
+                }}
+                aria-label="Filter bills by month"
+              />
+              <input
+                className="bills-input bills-filter-control"
+                type="date"
+                value={filterDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilterDate(value);
+                  if (value) {
+                    setFilterYear("");
+                    setFilterMonth("");
+                  }
+                }}
+                aria-label="Filter bills by date"
+              />
+              <button
+                type="button"
+                className="bills-btn bills-filter-clear"
+                onClick={clearFilters}
+                disabled={!hasDateFilters}
+              >
+                Clear
+              </button>
+            </div>
             {!loading && shop?.shop_id && (
               <>
                 <button className="bills-btn" onClick={() => fetchBills(shop.shop_id)}>

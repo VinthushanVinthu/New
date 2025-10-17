@@ -23,6 +23,19 @@
   -webkit-background-clip: text; background-clip:text; color: transparent;
 }
 .bills-actions{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.bills-filters{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.bills-filter-control{
+  min-width:140px;
+  flex:1 1 140px;
+}
+.bills-filter-clear{
+  flex:0 0 auto;
+}
 
 /* ===== Inputs ===== */
 .bills-input{

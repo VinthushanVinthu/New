@@ -7,6 +7,19 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+.po-filters{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.po-filter-control{
+  min-width:140px;
+  flex:1 1 140px;
+}
+.po-filter-clear{
+  flex:0 0 auto;
+}
 
 /* ===== Purchase Order full-page form ===== */
 .po-form-page{

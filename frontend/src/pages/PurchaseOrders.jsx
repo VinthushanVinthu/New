@@ -41,6 +41,30 @@ export default function PurchaseOrders() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [q, setQ] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+
+  const yearOptions = useMemo(() => {
+    const unique = new Set();
+    poList.forEach((po) => {
+      const timestamp = po?.ordered_at || po?.created_at;
+      if (!timestamp) return;
+      const dt = new Date(timestamp);
+      if (!Number.isNaN(dt.getTime())) {
+        unique.add(String(dt.getFullYear()));
+      }
+    });
+    return Array.from(unique).sort((a, b) => Number(b) - Number(a));
+  }, [poList]);
+
+  const hasDateFilters = Boolean(filterYear || filterMonth || filterDate);
+
+  const clearFilters = () => {
+    setFilterYear('');
+    setFilterMonth('');
+    setFilterDate('');
+  };
 
   const [mode, setMode] = useState('list'); // 'list' | 'form'
   const [formLoading, setFormLoading] = useState(false);
@@ -122,13 +146,34 @@ export default function PurchaseOrders() {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return poList;
-    return poList.filter((po) =>
-      [po.supplier_name, po.status, po.notes]
+    return poList.filter((po) => {
+      let yearStr = '';
+      let monthStr = '';
+      let dateStr = '';
+      const timestamp = po?.ordered_at || po?.created_at;
+      if (timestamp) {
+        const created = new Date(timestamp);
+        if (!Number.isNaN(created.getTime())) {
+          const year = created.getFullYear();
+          const month = String(created.getMonth() + 1).padStart(2, '0');
+          const day = String(created.getDate()).padStart(2, '0');
+          yearStr = String(year);
+          monthStr = `${yearStr}-${month}`;
+          dateStr = `${monthStr}-${day}`;
+        }
+      }
+
+      if (filterYear && yearStr !== filterYear) return false;
+      if (filterMonth && monthStr !== filterMonth) return false;
+      if (filterDate && dateStr !== filterDate) return false;
+
+      if (!term) return true;
+
+      return [po.supplier_name, po.status, po.notes]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term)),
-    );
-  }, [poList, q]);
+        .some((value) => String(value).toLowerCase().includes(term));
+    });
+  }, [poList, q, filterYear, filterMonth, filterDate]);
 
   const listSummary = useMemo(() => {
     return filtered.reduce((acc, row) => {
@@ -591,6 +636,64 @@ export default function PurchaseOrders() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
+          <div className="po-filters">
+            <select
+              className="form-input po-filter-control"
+              value={filterYear}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFilterYear(value);
+                if (value) {
+                  setFilterMonth('');
+                  setFilterDate('');
+                }
+              }}
+              aria-label="Filter purchase orders by year"
+            >
+              <option value="">All years</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+            <input
+              className="form-input po-filter-control"
+              type="month"
+              value={filterMonth}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFilterMonth(value);
+                if (value) {
+                  setFilterYear('');
+                  setFilterDate('');
+                }
+              }}
+              aria-label="Filter purchase orders by month"
+            />
+            <input
+              className="form-input po-filter-control"
+              type="date"
+              value={filterDate}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFilterDate(value);
+                if (value) {
+                  setFilterYear('');
+                  setFilterMonth('');
+                }
+              }}
+              aria-label="Filter purchase orders by date"
+            />
+            <button
+              className="btn po-filter-clear"
+              type="button"
+              onClick={clearFilters}
+              disabled={!hasDateFilters}
+            >
+              Clear filters
+            </button>
+          </div>
           <button
             className="btn-outline"
             type="button"
@@ -790,4 +893,3 @@ export default function PurchaseOrders() {
     </div>
   );
 }
-
