@@ -100,26 +100,46 @@ router.post(
     try {
       await conn.beginTransaction();
 
-      let resolvedCustomerId = customer_id || null;
-      const custName = customer?.name?.trim() || null;
-      const custPhone = customer?.phone?.trim() || null;
-      const custEmail = customer?.email?.trim() || null;
+      let resolvedCustomerId = null;
+      if (customer_id !== undefined && customer_id !== null && customer_id !== "") {
+        const parsedId = Number(customer_id);
+        if (!Number.isFinite(parsedId) || parsedId <= 0) {
+          throw new Error("Invalid customer_id");
+        }
+        resolvedCustomerId = parsedId;
+      }
+
+      const requestedCustomer = customer && typeof customer === "object" ? customer : null;
+      const skipCustomerCreation = Boolean(
+        req.body.skip_customer ||
+          req.body.anonymous_customer ||
+          requestedCustomer?.skip_save ||
+          requestedCustomer?.skip ||
+          requestedCustomer?.anonymous
+      );
+
+      const custName = requestedCustomer?.name?.trim() || null;
+      const custPhone = requestedCustomer?.phone?.trim() || null;
+      const custEmail = requestedCustomer?.email?.trim() || null;
       const hasCustomerPayload = !!(custName || custPhone || custEmail);
 
-      if (!resolvedCustomerId && custPhone) {
+      if (!resolvedCustomerId && !skipCustomerCreation && custPhone) {
         const [found] = await conn.query(
           "SELECT customer_id FROM customers WHERE shop_id = ? AND phone = ? LIMIT 1",
           [shop_id, custPhone]
         );
-        if (found.length) resolvedCustomerId = found[0].customer_id;
-        else if (hasCustomerPayload) {
-          const [ins] = await conn.query(
-            "INSERT INTO customers (shop_id, name, phone, email) VALUES (?, ?, ?, ?)",
-            [shop_id, custName, custPhone, custEmail]
-          );
-          resolvedCustomerId = ins.insertId;
+        if (found.length) {
+          resolvedCustomerId = found[0].customer_id;
         }
-      } else if (!resolvedCustomerId && hasCustomerPayload) {
+      }
+
+      const shouldInsertCustomer =
+        !resolvedCustomerId &&
+        !skipCustomerCreation &&
+        hasCustomerPayload &&
+        (custPhone || custEmail);
+
+      if (shouldInsertCustomer) {
         const [ins] = await conn.query(
           "INSERT INTO customers (shop_id, name, phone, email) VALUES (?, ?, ?, ?)",
           [shop_id, custName, custPhone, custEmail]
@@ -146,6 +166,13 @@ router.post(
             phone: customerDetails.phone || existingCustomer.phone || null,
           };
         }
+      } else if (skipCustomerCreation) {
+        customerDetails = {
+          id: null,
+          name: custName,
+          email: custEmail,
+          phone: custPhone,
+        };
       }
 
       const [[shopRow]] = await conn.query(
